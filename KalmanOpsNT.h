@@ -1,3 +1,7 @@
+#ifndef KalmanOpsNT_H
+#define KalmanOpsNT_H
+
+inline
 void MultForKalmanGain(const MatriplexSym<float, 6>& A,
                        const MatriplexSym<float, 6>& B,
                              Matriplex<float, 6, 6>& C)
@@ -38,6 +42,7 @@ void MultForKalmanGain(const MatriplexSym<float, 6>& A,
 
 //------------------------------------------------------------------------------
 
+inline
 void MultResidualsAdd(const Matriplex<float, 6, 6>& A,
                       const Matriplex<float, 6, 1>& B,
                       const Matriplex<float, 6, 1>& C,
@@ -69,6 +74,7 @@ void MultResidualsAdd(const Matriplex<float, 6, 6>& A,
 
 //------------------------------------------------------------------------------
 
+inline
 void FinalKalmanErr(const MatriplexSym<float, 6>& A,
                     const Matriplex<float, 6, 6>& B,
                           MatriplexSym<float, 6>& C)
@@ -108,3 +114,4 @@ void FinalKalmanErr(const MatriplexSym<float, 6>& A,
 
 //------------------------------------------------------------------------------
 
+#endif

@@ -18,9 +18,38 @@ TrackState updateParameters(TrackState& propagatedState, MeasurementState& measu
 			    SMatrix36& projMatrix,SMatrix63& projMatrixT);
 
 #ifndef __APPLE__
+
+// #include "MatriplexSymNT.h"
+
+// const idx_t M = 6;
+
+// typedef Matriplex<float, M, M>   MPlexMM;
+// typedef Matriplex<float, M, 1>   MPlexMV;
+// typedef MatriplexSym<float, M>   MPlexSS;
+
+#include "KalmanOpsNT.h"
+
+struct updateParametersContext
+{
+  // Could also have input / output parameters here (as pointers, so that it's
+  // easy to swap last "out" into "in" for the next measuerement).
+
+  // Temporaries
+  MPlexSS propErr;
+  MPlexSS resErr;
+  MPlexMM kalmanGain;
+
+   updateParametersContext(int n) :
+      propErr(n),
+      resErr(n),
+      kalmanGain(n)
+   {}
+};
+
 void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
                            const MPlexSS &msErr,  const MPlexMV& msPar,
-                                 MPlexSS &outErr,       MPlexMV& outPar);
+                                 MPlexSS &outErr,       MPlexMV& outPar,
+                                 updateParametersContext &ctx);
 #endif
 
 #endif

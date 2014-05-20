@@ -86,28 +86,13 @@ void updateParameters66(TrackState& propagatedState, MeasurementState& measureme
 }
 
 //------------------------------------------------------------------------------
+
 #ifndef __APPLE__
-// #include "MatriplexSymNT.h"
-
-// const idx_t M = 6;
-
-// typedef Matriplex<float, M, M>   MPlexMM;
-// typedef Matriplex<float, M, 1>   MPlexMV;
-// typedef MatriplexSym<float, M>   MPlexSS;
-
-#include "KalmanOpsNT.h"
-
-struct UpdateParametersContext
-{
-  // Could also have input / output parameters here (as pointers, so that it's
-  // easy to swap last "out" into "in" for the next measuerement).
-
-  // Temporaries
-};
 
 void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
                            const MPlexSS &msErr,  const MPlexMV& msPar,
-                                 MPlexSS &outErr,       MPlexMV& outPar)
+                                 MPlexSS &outErr,       MPlexMV& outPar,
+                                 updateParametersContext &ctx)
 {
   const idx_t N = psErr.N;
   // Assert N-s of all parameters are the same.
@@ -117,7 +102,8 @@ void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
 
   // Also: resErr could be 3x3, kalmanGain 6x3
 
-  MPlexSS propErr(N);
+  //MPlexSS propErr(N);
+  MPlexSS &propErr = ctx.propErr;
   propErr = psErr;       // could use/overwrite psErr?
   propErr.AddNoise(0.0); // e.g. ?
 
@@ -131,7 +117,8 @@ void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
   //     printf("%8f ", msErr.At(i,j,0)); printf("\n");
   // } printf("\n");
 
-  MPlexSS resErr(N);
+  //MPlexSS resErr(N);
+  MPlexSS &resErr = ctx.resErr;
   resErr.AddIntoUpperLeft3x3ZeroTheRest(msErr, propErr);
   // Do not really need to zero the rest ... it is not used.
 
@@ -149,7 +136,8 @@ void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
   //     printf("%8f ", resErr.At(i,j,0)); printf("\n");
   // } printf("\n");
 
-  MPlexMM kalmanGain(N);
+  //MPlexMM kalmanGain(N);
+  MPlexMM &kalmanGain = ctx.kalmanGain;
   MultForKalmanGain(propErr, resErr, kalmanGain);
   // Do not need the right part, leave it unitialized.
 

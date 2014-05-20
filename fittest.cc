@@ -141,8 +141,14 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
 #endif
 }
 
+
+//==============================================================================
+// runFittingTestPlex
+//==============================================================================
+
 #ifndef __APPLE__
-void runFittingTestPlex(bool saveTree)
+
+void runFittingTestPlex(bool saveTree, int Ntracks)
 {
   float pt_mc=0.,pt_fit=0.,pt_err=0.; 
 #ifndef NO_ROOT
@@ -163,8 +169,6 @@ void runFittingTestPlex(bool saveTree)
   projMatrix36(1,1)=1.;
   projMatrix36(2,2)=1.;
   SMatrix63 projMatrix36T = ROOT::Math::Transpose(projMatrix36);
-
-  int Ntracks = 1000;
 
   std::vector<Track> simtracks;
   for (int itrack=0;itrack<Ntracks;++itrack)
@@ -199,6 +203,8 @@ void runFittingTestPlex(bool saveTree)
 
     initStateV[itrack] = trk.state();
   }
+
+  updateParametersContext updateCtx(Ntracks);
 
   for (int hi = 0; hi < Nhits; ++hi)
   {
@@ -249,7 +255,9 @@ void runFittingTestPlex(bool saveTree)
     }
 
     // begin timing
-    updateParametersMPlex(psErr, psPar, msErr, msPar, outErr, outPar);
+    updateParametersMPlex(psErr, psPar, msErr, msPar,
+                          outErr, outPar,
+                          updateCtx);
     // end timing & sum
 
     // TrackState  updatedState;

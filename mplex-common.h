@@ -1,3 +1,6 @@
+#ifndef mplex_common_h
+#define mplex_common_h
+
 #define ROOT_Math_MnConfig
 #include "Math/SMatrix.h"
 
@@ -6,7 +9,6 @@
 #include <cstdio>
 #include <iostream>
 #include <stdlib.h>
-#include <sys/time.h>
 
 // Set this to 8 for AVX, 16 for MIC
 const idx_t Sfac = 1;
@@ -39,16 +41,6 @@ const int COMPARE_INVERSES = 0;
 typedef ROOT::Math::SMatrix<float, M>                                      SMatrixMM;
 typedef ROOT::Math::SMatrix<float, M, M, ROOT::Math::MatRepSym<float, M> > SMatrixSS;
 
-
-
-double dtime()
-{
-    double tseconds = 0.0;
-    struct timeval mytime;
-    gettimeofday(&mytime,(struct timezone*)0);
-    tseconds = (double)(mytime.tv_sec + mytime.tv_usec*1.0e-6);
-    return( tseconds );
-}
 
 template <typename X>
 X* new_sth(int n)
@@ -106,3 +98,5 @@ void init_mulmuz(SMatrixSS *muls, SMatrixSS *muzs)
     }
   }
 }
+
+#endif
