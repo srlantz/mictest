@@ -88,17 +88,9 @@ void Multiply(const Matriplex<T, D1, D2, N>& A,
 template<typename T, idx_t D, idx_t N>
 struct CramerInverter
 {
-   void operator()(Matriplex<T, D, D, N>& C, double *determ=0)
+   CramerInverter(Matriplex<T, D, D, N>& C, double *determ=0)
    {
-      // We don't do general Inverts.
-
-      if (determ)
-      {
-         for (idx_t n = 0; n < N; ++n)
-         {
-            determ[n] = 0;
-         }
-      }
+     throw std::runtime_error("general cramer inversion not supported");
    }
 };
 
@@ -192,42 +184,12 @@ void InvertCramer(Matriplex<T, D, D, N>& C, double *determ=0)
 template<typename T, idx_t D, idx_t N>
 struct CholInverter
 {
-   void operator()(Matriplex<T, D, D, N>& C, double *determ=0)
+   CholInverter(Matriplex<T, D, D, N>& m)
    {
-      // We don't do general Inverts.
-
-      if (determ)
-      {
-         for (idx_t n = 0; n < N; ++n)
-         {
-            determ[n] = 0;
-         }
-      }
+     throw std::runtime_error("general cholesky inversion not supported");
    }
 };
 
-template<typename T, idx_t D, idx_t N>
-struct CholInverterBase
-{
-   T fL[N * D * (D + 1) / 2];
-
-   template<typename G, idx_t N>
-   struct PackedArrayAdapter
-   {
-      G* fArr; ///< pointer to first array element
-
-      /// constructor
-      PackedArrayAdapter(G* arr) : fArr(arr) {}
-
-      /// read access to elements (make sure that j <= i)
-      const G operator()(unsigned i, unsigned j) const
-      { return fArr[N * (((i * (i + 1)) / 2) + j)]; }
-      /// write access to elements (make sure that j <= i)
-      G& operator()(unsigned i, unsigned j)
-      { return fArr[N * (((i * (i + 1)) / 2) + j)]; }
-   };
-
-};
 
 template<typename T, idx_t N>
 struct CholInverter<T, 3, N>
@@ -318,11 +280,11 @@ struct CholInverter<T, 3, N>
 };
 
 template<typename T, idx_t D, idx_t N>
-void InvertChol(Matriplex<T, D, D, N>& C, double *determ=0)
+void InvertChol(Matriplex<T, D, D, N>& m)
 {
    // We don't do general Inverts.
 
-   CholInverter<T, D, N> ci(C);
+   CholInverter<T, D, N> ci(m);
    //ci(C, determ);
 }
 
