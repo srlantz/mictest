@@ -34,6 +34,69 @@ TrackState propagateLineToR(TrackState& inputState, float r) {
   return result;
 }
 
+//------------------------------------------------------------------------------
+
+namespace
+{
+   inline float hipo(float x, float y) { return sqrt(x*x + y*y); }
+}
+
+void propagateLineToRMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
+                           const MPlexSS &msErr,  const MPlexMV& msPar,
+                                 MPlexSS &outErr,       MPlexMV& outPar,
+                                 updateParametersContext &ctx)
+{
+   const idx_t N  = psErr.N;
+   const idx_t N6 = N * 6;
+
+#pragma simd
+   for (int n = 0; n < N; ++n)
+   {
+      float dr = hipo(msPar[0 * N6 + n], msPar[1 * N6 + n]) - hipo(psPar[0 * N6 + n], psPar[1 * N6 + n]);
+      float pt = hipo(psPar[3 * N6 + n], psPar[4 * N6 + n]);
+      float path = dr / pt;
+      float psqr = path * path;
+
+      outPar[0 * N6 + n] = psPar[0 * N6 + n] + path * psPar[3 * N6 + n];
+      outPar[1 * N6 + n] = psPar[1 * N6 + n] + path * psPar[4 * N6 + n];
+      outPar[2 * N6 + n] = psPar[2 * N6 + n] + path * psPar[5 * N6 + n];
+      outPar[3 * N6 + n] = psPar[3 * N6 + n];
+      outPar[4 * N6 + n] = psPar[4 * N6 + n];
+      outPar[5 * N6 + n] = psPar[5 * N6 + n];
+
+      {
+        const MPlexSS& A = psErr;
+              MPlexSS& B = outErr;
+              float p = path;
+              float psq = p * p;
+
+        B.fArray[0 * N + n] = A.fArray[0 * N + n];
+        B.fArray[1 * N + n] = A.fArray[1 * N + n];
+        B.fArray[2 * N + n] = A.fArray[2 * N + n];
+        B.fArray[3 * N + n] = A.fArray[3 * N + n];
+        B.fArray[4 * N + n] = A.fArray[4 * N + n];
+        B.fArray[5 * N + n] = A.fArray[5 * N + n];
+        B.fArray[6 * N + n] = A.fArray[6 * N + n] + p * A.fArray[0 * N + n];
+        B.fArray[7 * N + n] = A.fArray[7 * N + n] + p * A.fArray[1 * N + n];
+        B.fArray[8 * N + n] = A.fArray[8 * N + n] + p * A.fArray[3 * N + n];
+        B.fArray[9 * N + n] = A.fArray[9 * N + n] + p * (A.fArray[6 * N + n] + A.fArray[6 * N + n]) + psq * A.fArray[0 * N + n];
+        B.fArray[10 * N + n] = A.fArray[10 * N + n] + p * A.fArray[1 * N + n];
+        B.fArray[11 * N + n] = A.fArray[11 * N + n] + p * A.fArray[2 * N + n];
+        B.fArray[12 * N + n] = A.fArray[12 * N + n] + p * A.fArray[4 * N + n];
+        B.fArray[13 * N + n] = A.fArray[13 * N + n] + p * (A.fArray[7 * N + n] + A.fArray[10 * N + n]) + psq * A.fArray[1 * N + n];
+        B.fArray[14 * N + n] = A.fArray[14 * N + n] + p * (A.fArray[11 * N + n] + A.fArray[11 * N + n]) + psq * A.fArray[2 * N + n];
+        B.fArray[15 * N + n] = A.fArray[15 * N + n] + p * A.fArray[3 * N + n];
+        B.fArray[16 * N + n] = A.fArray[16 * N + n] + p * A.fArray[4 * N + n];
+        B.fArray[17 * N + n] = A.fArray[17 * N + n] + p * A.fArray[5 * N + n];
+        B.fArray[18 * N + n] = A.fArray[18 * N + n] + p * (A.fArray[8 * N + n] + A.fArray[15 * N + n]) + psq * A.fArray[3 * N + n];
+        B.fArray[19 * N + n] = A.fArray[19 * N + n] + p * (A.fArray[12 * N + n] + A.fArray[16 * N + n]) + psq * A.fArray[4 * N + n];
+        B.fArray[20 * N + n] = A.fArray[20 * N + n] + p * (A.fArray[17 * N + n] + A.fArray[17 * N + n]) + psq * A.fArray[5 * N + n];
+      }
+   }
+}
+
+
+//==============================================================================
 
 // helix propagation in steps along helix trajectory. 
 // each step travels for a path lenght equal to delta r between the current position and the target radius. 

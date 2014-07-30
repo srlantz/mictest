@@ -20,4 +20,13 @@ TrackState propagateHelixToR(TrackState& inputState, float r);
 //2. there are 2 numerical solutions, 3. need to propagate uncertainties throgh the 2nd order equation
 TrackState propagateHelixToR_test(TrackState& inputState, float r);
 
+
+
+class updateParametersContext;
+
+void propagateLineToRMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
+                           const MPlexSS &msErr,  const MPlexMV& msPar,
+                                 MPlexSS &outErr,       MPlexMV& outPar,
+                                 updateParametersContext &ctx);
+
 #endif
