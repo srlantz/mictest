@@ -94,7 +94,7 @@ void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
                                  MPlexSS &outErr,       MPlexMV& outPar,
                                  updateParametersContext &ctx)
 {
-  const idx_t N = psErr.N;
+  // const idx_t N = psErr.N;
   // Assert N-s of all parameters are the same.
 
   // Temporaries -- this is expensive -- should have them allocated outside and reused.

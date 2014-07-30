@@ -38,11 +38,13 @@ struct updateParametersContext
   MPlexSS propErr;
   MPlexSS resErr;
   MPlexMM kalmanGain;
+  MPlexQF pathLen;
 
    updateParametersContext(int n) :
       propErr(n),
       resErr(n),
-      kalmanGain(n)
+      kalmanGain(n),
+      pathLen(n)
    {}
 };
 
