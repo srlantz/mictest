@@ -1,10 +1,10 @@
 #ifndef _fittest_
 #define _fittest_
 
-void runFittingTest(bool saveTree, unsigned int Ntracks);
+double runFittingTest(bool saveTree, unsigned int Ntracks);
 
 #ifndef __APPLE__
-void runFittingTestPlex(bool saveTree, int Ntracks);
+double runFittingTestPlex(bool saveTree, int Ntracks);
 #endif
 
 #endif

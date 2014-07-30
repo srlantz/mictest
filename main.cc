@@ -8,21 +8,17 @@
 #include "MatriplexCommon.h"
 
 #include "fittest.h"
-#include "buildtest.h"
+//#include "buildtest.h"
 
 int main()
 {
-  bool saveTree = true;
+  bool saveTree = false;
 
-  double t0, tmp, tsm;
+  double tmp, tsm;
 
-  t0 = dtime();
-  runFittingTest(saveTree,5000);
-  tsm = dtime() - t0;
+  tsm = runFittingTest(saveTree, 5000);
 
-  t0 = dtime();
-  runFittingTestPlex(saveTree, 5000);
-  tmp = dtime() - t0;
+  tmp = runFittingTestPlex(saveTree, 5000);
 
   printf("SMatrix = %.3f   Matriplex = %.3f   ---   SM/MP = %.3f\n", tsm, tmp, tsm / tmp);
 

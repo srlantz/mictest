@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-void runFittingTest(bool saveTree, unsigned int Ntracks)
+double runFittingTest(bool saveTree, unsigned int Ntracks)
 {
   float pt_mc=0.,pt_fit=0.,pt_err=0.; 
 #ifndef NO_ROOT
@@ -48,17 +48,19 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
     simtracks.push_back(simtrk);
   }
 
+  double time = dtime();
+
   for (unsigned int itrack=0;itrack<simtracks.size();++itrack) {
 
     Track& trk = simtracks[itrack];
 
-    std::cout << std::endl;
-    std::cout << "processing track #" << itrack << std::endl;
+    // std::cout << std::endl;
+    // std::cout << "processing track #" << itrack << std::endl;
     
-    std::cout << "init x: " << trk.parameters()[0] << " " << trk.parameters()[1] << " " << trk.parameters()[2] << std::endl;
-    std::cout << "init p: " << trk.parameters()[3] << " " << trk.parameters()[4] << " " << trk.parameters()[5] << std::endl;
-    std::cout << "init e: " << std::endl;
-    dumpMatrix(trk.errors());
+    // std::cout << "init x: " << trk.parameters()[0] << " " << trk.parameters()[1] << " " << trk.parameters()[2] << std::endl;
+    // std::cout << "init p: " << trk.parameters()[3] << " " << trk.parameters()[4] << " " << trk.parameters()[5] << std::endl;
+    // std::cout << "init e: " << std::endl;
+    // dumpMatrix(trk.errors());
 
     std::vector<Hit>& hits = trk.hitsVector();
 
@@ -115,11 +117,11 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
       
     }
     
-    std::cout << "updatedState" << std::endl;
-    std::cout << "x: " << updatedState.parameters[0] << " " << updatedState.parameters[1] << " " << updatedState.parameters[2] << std::endl;
-    std::cout << "p: " << updatedState.parameters[3] << " " << updatedState.parameters[4] << " " << updatedState.parameters[5] << std::endl;
-    std::cout << "updatedState.errors" << std::endl;
-    dumpMatrix(updatedState.errors);
+    // std::cout << "updatedState" << std::endl;
+    // std::cout << "x: " << updatedState.parameters[0] << " " << updatedState.parameters[1] << " " << updatedState.parameters[2] << std::endl;
+    // std::cout << "p: " << updatedState.parameters[3] << " " << updatedState.parameters[4] << " " << updatedState.parameters[5] << std::endl;
+    // std::cout << "updatedState.errors" << std::endl;
+    // dumpMatrix(updatedState.errors);
 
 #ifndef NO_ROOT
     if (saveTree) {
@@ -132,6 +134,8 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
     }
 #endif
   }
+
+  return dtime() - time;
 
 #ifndef NO_ROOT
   if (saveTree) {
@@ -148,7 +152,7 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
 
 #ifndef __APPLE__
 
-void runFittingTestPlex(bool saveTree, int Ntracks)
+double runFittingTestPlex(bool saveTree, int Ntracks)
 {
   float pt_mc=0.,pt_fit=0.,pt_err=0.; 
 #ifndef NO_ROOT
@@ -192,19 +196,28 @@ void runFittingTestPlex(bool saveTree, int Ntracks)
 
 
   MPlexSS psErr(Ntracks);  MPlexMV psPar(Ntracks);
-  MPlexSS msErr(Ntracks);  MPlexMV msPar(Ntracks);
   MPlexSS outErr(Ntracks); MPlexMV outPar(Ntracks);
+
+  std::vector<MPlexSS> Err(2, Ntracks);
+  std::vector<MPlexMV> Par(2, Ntracks);
+
+  MPlexQI Chg(Ntracks);
+
+  int iC = 0; // current
+  int iP = 1; // propagated
 
   for (int itrack=0;itrack<Ntracks;++itrack)
   {
-    Track& trk = simtracks[itrack];
-    outErr.Assign(itrack, trk.errors().Array());
-    outPar.Assign(itrack, trk.parameters().Array());
+    Track &trk = simtracks[itrack];
+    Err[iC].Assign(itrack, trk.errors().Array());
+    Par[iC].Assign(itrack, trk.parameters().Array());
 
     initStateV[itrack] = trk.state();
+    Chg[0, 0, itrack]  = trk.charge();
   }
 
-  updateParametersContext updateCtx(Ntracks);
+  std::vector<MPlexSS> msErr(Nhits, Ntracks);
+  std::vector<MPlexMV> msPar(Nhits, Ntracks);
 
   for (int hi = 0; hi < Nhits; ++hi)
   {
@@ -213,13 +226,30 @@ void runFittingTestPlex(bool saveTree, int Ntracks)
       Track &trk = simtracks[itrack];
       Hit   &hit = trk.hitsVector()[hi];
 
-    std::cout << std::endl;
-    std::cout << "processing track #" << itrack << std::endl;
+      msErr[hi].Assign(itrack, hit.error().Array());
+      msPar[hi].Assign(itrack, hit.parameters().Array());
+    }
+  }
+
+  updateParametersContext updateCtx(Ntracks);
+
+  double time = dtime();
+
+  for (int hi = 0; hi < Nhits; ++hi)
+  {
+    //for (int itrack=0;itrack<Ntracks;++itrack)
+#ifdef COMMENT_OUT
+    {
+      Track &trk = simtracks[itrack];
+      Hit   &hit = trk.hitsVector()[hi];
+
+    // std::cout << std::endl;
+    // std::cout << "processing track #" << itrack << std::endl;
     
-    std::cout << "init x: " << trk.parameters()[0] << " " << trk.parameters()[1] << " " << trk.parameters()[2] << std::endl;
-    std::cout << "init p: " << trk.parameters()[3] << " " << trk.parameters()[4] << " " << trk.parameters()[5] << std::endl;
-    std::cout << "init e: " << std::endl;
-    dumpMatrix(trk.errors());
+    // std::cout << "init x: " << trk.parameters()[0] << " " << trk.parameters()[1] << " " << trk.parameters()[2] << std::endl;
+    // std::cout << "init p: " << trk.parameters()[3] << " " << trk.parameters()[4] << " " << trk.parameters()[5] << std::endl;
+    // std::cout << "init e: " << std::endl;
+    // dumpMatrix(trk.errors());
 
       TrackState       updatedState;
       outErr.SetArray(itrack, updatedState.errors.Array());
@@ -232,8 +262,11 @@ void runFittingTestPlex(bool saveTree, int Ntracks)
 	// std::cout << "updatedState.errors" << std::endl;
 	// dumpMatrix(updatedState.errors);	
 
-      TrackState       propState = propagateHelixToR(updatedState, hit.r());
-      MeasurementState measState = hit.measurementState();
+      float x = msPar[hi].At(0, 0, itrack);
+      float y = msPar[hi].At(1, 0, itrack);
+      float r = sqrt(x*x + y*y);
+
+      TrackState       propState = propagateHelixToR(updatedState, r);
 
 	// std::cout << "propState.parameters (helix propagation)" << std::endl;
 	// std::cout << "x: " << propState.parameters[0] << " " << propState.parameters[1] << " " << propState.parameters[2] << std::endl;
@@ -246,19 +279,21 @@ void runFittingTestPlex(bool saveTree, int Ntracks)
 	// std::cout << "measState.errors" << std::endl;
 	// dumpMatrix(measState.errors);
 
-
       psErr.Assign(itrack, propState.errors.Array());
       psPar.Assign(itrack, propState.parameters.Array());
-      msErr.Assign(itrack, measState.errors.Array());
-      msPar.Assign(itrack, measState.parameters.Array());
 
     }
+#endif
 
-    // begin timing
-    updateParametersMPlex(psErr, psPar, msErr, msPar,
-                          outErr, outPar,
+    // XXXX Note, charge is not passed (line propagation). Could be part of ctxt, too.
+
+    propagateLineToRMPlex(Err[iC], Par[iC], msErr[hi], msPar[hi],
+                           Err[iP], Par[iP],
+                           updateCtx);
+
+    updateParametersMPlex(Err[iP], Par[iP], msErr[hi], msPar[hi],
+                          Err[iC], Par[iC],
                           updateCtx);
-    // end timing & sum
 
     // TrackState  updatedState;
     // outErr.SetArray(itrack, updatedState.errors.Array());
@@ -319,6 +354,9 @@ void runFittingTestPlex(bool saveTree, int Ntracks)
     f->Write();
     f->Close();
   }
+
+  return dtime() - time;
+
 #endif
 }
 
