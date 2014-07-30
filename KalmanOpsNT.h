@@ -1,6 +1,8 @@
 #ifndef KalmanOpsNT_H
 #define KalmanOpsNT_H
 
+//------------------------------------------------------------------------------
+
 inline
 void MultForKalmanGain(const MatriplexSym<float, 6>& A,
                        const MatriplexSym<float, 6>& B,
