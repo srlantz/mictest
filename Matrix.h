@@ -31,6 +31,10 @@ const idx_t M = 6;
 typedef Matriplex<float, M, M>   MPlexMM;
 typedef Matriplex<float, M, 1>   MPlexMV;
 typedef MatriplexSym<float, M>   MPlexSS;
+
+typedef Matriplex<float, 1, 1>   MPlexQF;
+typedef Matriplex<int,   1, 1>   MPlexQI;
+
 #endif
 
 //==============================================================================
@@ -41,7 +45,7 @@ extern std::default_random_engine            g_gen;
 extern std::normal_distribution<float>       g_gaus;
 extern std::uniform_real_distribution<float> g_unif;
 
-#ifndef NO_ROOT
+#ifdef NO_ROOT
 
 typedef double Double_t;
 
