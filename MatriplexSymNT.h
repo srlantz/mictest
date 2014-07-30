@@ -55,6 +55,10 @@ public:
 
    T& operator()(idx_t i, idx_t j, idx_t n) { return At(i, j, n); }
 
+   T  operator[](idx_t x) const { return fArray[x]; }
+
+   T& operator[](idx_t xx) { return fArray[xx]; }
+
    void Assign(idx_t n, T *arr)
    {
 #pragma simd
@@ -108,6 +112,9 @@ public:
    T& At(idx_t i, idx_t j, idx_t n) { return fArray[fOff3x3[i * 3 + j] * N + n]; }
 
    T& operator()(idx_t i, idx_t j, idx_t n) { return At(i, j, n); }
+
+   T  operator[](idx_t xx) const { return fArray[xx]; }
+   T& operator[](idx_t xx)       { return fArray[xx]; }
 
    void Assign(idx_t n, T *arr)
    {
@@ -163,6 +170,9 @@ public:
    T  At(idx_t i, idx_t j, idx_t n) const { return fArray[fOff6x6[i * 6 + j] * N + n]; }
 
    T& operator()(idx_t i, idx_t j, idx_t n) { return At(i, j, n); }
+
+   T  operator[](idx_t xx) const { return fArray[xx]; }
+   T& operator[](idx_t xx)       { return fArray[xx]; }
 
    void Assign(idx_t n, T *arr)
    {
