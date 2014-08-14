@@ -85,14 +85,17 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
     std::vector<Hit>& hits = trk.hitsVector();
 
     TrackState initState = trk.state();
-    TrackState simStateHit0 = propagateHelixToR(initState,4.);//4 is the simulated radius 
+    TrackState simStateHit0;
+    propagateHelixToR(initState,4.,simStateHit0);//4 is the simulated radius 
     std::cout << "simulation x=" << simStateHit0.parameters[0] << " y=" << simStateHit0.parameters[1] << " z=" << simStateHit0.parameters[2] << " r=" << sqrt(pow(simStateHit0.parameters[0],2)+pow(simStateHit0.parameters[1],2)) << std::endl; 
     std::cout << "simulation px=" << simStateHit0.parameters[3] << " py=" << simStateHit0.parameters[4] << " pz=" << simStateHit0.parameters[5] << std::endl; 
+    std::cout << "simulation pt=" << sqrt(pow(simStateHit0.parameters[3],2)+pow(simStateHit0.parameters[4],2)) << std::endl; 
     TrackState cfitStateHit0;
     //conformalFit(hits[0],hits[1],hits[2],trk.charge(),cfitStateHit0);//fit is problematic in case of very short lever arm
     conformalFit(hits[0],hits[5],hits[9],trk.charge(),cfitStateHit0);
     std::cout << "conformfit x=" << cfitStateHit0.parameters[0] << " y=" << cfitStateHit0.parameters[1] << " z=" << cfitStateHit0.parameters[2] << std::endl; 
     std::cout << "conformfit px=" << cfitStateHit0.parameters[3] << " py=" << cfitStateHit0.parameters[4] << " pz=" << cfitStateHit0.parameters[5] << std::endl; 
+    std::cout << "conformfit pt=" << sqrt(pow(cfitStateHit0.parameters[3],2)+pow(cfitStateHit0.parameters[4],2)) << std::endl; 
     if (saveTree) {
       simHit0_x=simStateHit0.parameters[0];
       simHit0_y=simStateHit0.parameters[1];
@@ -114,14 +117,15 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
       cfitHit0_pze=sqrt(cfitStateHit0.errors[5][5]);
     }
     cfitStateHit0.errors*=10;//rescale errors to avoid bias from reusing of hit information
-    TrackState updatedState = cfitStateHit0;
+    TrackState updatedState = initState;//cfitStateHit0; fixme
 
-    bool dump = false;
+    bool dump = true;
     
+    TrackState propState;
     for (std::vector<Hit>::iterator hit=hits.begin();hit!=hits.end();++hit) {
       
       //for each hit, propagate to hit radius and update track state with hit measurement
-      TrackState       propState = propagateHelixToR(updatedState,hit->r());
+      propagateHelixToR(updatedState,hit->r(),propState);
       MeasurementState measState = hit->measurementState();
       updatedState = updateParameters(propState, measState,projMatrix36,projMatrix36T);
       //updateParameters66(propState, measState, updatedState);//updated state is now modified
@@ -168,6 +172,7 @@ void runFittingTest(bool saveTree, unsigned int Ntracks)
     std::cout << "updatedState" << std::endl;
     std::cout << "x: " << updatedState.parameters[0] << " " << updatedState.parameters[1] << " " << updatedState.parameters[2] << std::endl;
     std::cout << "p: " << updatedState.parameters[3] << " " << updatedState.parameters[4] << " " << updatedState.parameters[5] << std::endl;
+    std::cout << "updatedState pt=" << sqrt(pow(updatedState.parameters[3],2)+pow(updatedState.parameters[4],2)) << std::endl; 
     std::cout << "updatedState.errors" << std::endl;
     dumpMatrix(updatedState.errors);
 
@@ -275,7 +280,8 @@ void runFittingTestPlex(bool saveTree)
 	// std::cout << "updatedState.errors" << std::endl;
 	// dumpMatrix(updatedState.errors);	
 
-      TrackState       propState = propagateHelixToR(updatedState, hit.r());
+      TrackState  propState;//move out of loop?
+      propagateHelixToR(updatedState, hit.r(),propState);
       MeasurementState measState = hit.measurementState();
 
 	// std::cout << "propState.parameters (helix propagation)" << std::endl;

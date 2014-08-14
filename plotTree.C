@@ -6,13 +6,13 @@
   gStyle->SetOptFit(1011);
 
   bool doFit = 1;
-  bool doConformal = 1;
-  bool doBuild = 1;
-  bool doSim = 1;
+  bool doConformal = 0;
+  bool doBuild = 0;
+  bool doSim = 0;
 
   if (doFit) {
 
-    TFile *_file0 = TFile::Open("validationtree.root");
+    TFile *_file0 = TFile::Open("validationtree_giuseppe_reducetemp3.root");
     
     TCanvas cf1;
     TH1F* pt_res = new TH1F("pt_res","pt resolution",100,-0.5,0.5);

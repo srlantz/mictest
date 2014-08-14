@@ -181,7 +181,7 @@ void updateParametersMPlex(const MPlexSS &psErr,  const MPlexMV& psPar,
 TrackState updateParameters(TrackState& propagatedState, MeasurementState& measurementState, 
 			    SMatrix36& projMatrix,SMatrix63& projMatrixT) {
 
-  bool print = false;
+  bool print = true;
 
   //test adding noise (mutiple scattering) on position (needs to be done more properly...)
   SMatrixSym66 noise;

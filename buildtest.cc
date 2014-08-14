@@ -158,7 +158,7 @@ void runBuildingTest(bool saveTree, TTree *tree,unsigned int& tk_nhits, float& t
     TrackState updatedState = trk.state();
     std::vector<Hit> seedhits;
     for (int ihit=0;ihit<nhits_per_seed;++ihit) {//seeds have 3 hits
-      TrackState       propState = propagateHelixToR(updatedState,hits[ihit].r());
+      TrackState       propState = propagateHelixToR_old(updatedState,hits[ihit].r());
       MeasurementState measState = hits[ihit].measurementState();
       updatedState = updateParameters(propState, measState,projMatrix36,projMatrix36T);
       seedhits.push_back(hits[ihit]);//fixme chi2
@@ -308,7 +308,7 @@ void processCandidates(std::pair<Track, TrackState>& cand,std::vector<std::pair<
     
   if (debug) std::cout << "processing candidate with nHits=" << tkcand.nHits() << std::endl;
     
-  TrackState propState = propagateHelixToR(updatedState,4.*float(ilay+1));//radius of 4*ilay
+  TrackState propState = propagateHelixToR_old(updatedState,4.*float(ilay+1));//radius of 4*ilay
   float predx = propState.parameters.At(0);
   float predy = propState.parameters.At(1);
   float predz = propState.parameters.At(2);

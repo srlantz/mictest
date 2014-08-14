@@ -39,7 +39,7 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, std::
 
   //std::cout << "track with p=" << px << " " << py << " " << pz << " pt=" << sqrt(px*px+py*py) << " p=" << sqrt(px*px+py*py+pz*pz) << std::endl;
 
-  float hitposerrXY = 0.01;//assume 100mum uncertainty in xy coordinate
+  float hitposerrXY = 0.01;//assume 100mum uncertainty in xy coordinate//fixme
   float hitposerrZ = 0.1;//assume 1mm uncertainty in z coordinate
 
   TrackState initState;
@@ -51,7 +51,9 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, std::
 
   //do 4 cm in radius using propagation.h
   for (unsigned int nhit=1;nhit<=nTotHit;++nhit) {
-    TrackState propState = propagateHelixToR(tmpState,4.*float(nhit));//radius of 4*nhit
+
+    //GIUSEPPE
+    TrackState propState = propagateHelixToR_old(tmpState,4.*float(nhit));//radius of 4*nhit
 
     //if (nhit==1) std::cout << "crossing #" << nhit << " " << propState.parameters.At(0) << " " << propState.parameters.At(1) << " " << propState.parameters.At(2) << std::endl;
 
@@ -71,6 +73,80 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, std::
     Hit hit1(x1,covx1);    
     hits.push_back(hit1);  
     tmpState = propState;
+
+    /*
+    //KEVIN
+    TrackState propState = propagateHelixToR(tmpState,4.*float(nhit));//radius of 4*ihit
+    float initX   = propState.parameters.At(0);
+    float initY   = propState.parameters.At(1);
+    float initZ   = propState.parameters.At(2);
+    float initPhi = atan2(initY,initX);
+    float rad     = sqrt(initX*initX+initY*initY);
+    float rad2    = rad*rad;
+
+    float radfix  = rad;//fixme rad 4;
+
+    float hitZ = hitposerrZ*g_gaus(g_gen)+initZ;
+    // Comment these lines for phi smearing if using xy smear
+    //float hitX = hitposerrXY*g_gaus(g_gen)+initX;
+    //float hitY = hitposerrXY*g_gaus(g_gen)+initY;
+    //float hitPhi = atan2(hitY,hitX);
+    //   //float hity = sqrt((pos.At(0) + k*(px*sinAP-py*(1-cosAP)))*(pos.At(0) + k*(px*sinAP-py*(1-cosAP)))+
+    //          (pos.At(1) + k*(py*sinAP+px*(1-cosAP)))*(pos.At(1) + k*(py*sinAP+px*(1-cosAP)))-
+    //           hitx*hitx);//try to get the fixed radius
+    //std::cout << "hit#" << nhit << " " << hitx << " " << hity << " " << hitz << std::endl;
+    // Comment out these lines if not using xy smear
+
+    float hitPhi  = ((hitposerrXY/radfix)*g_gaus(g_gen))+initPhi;
+    //float rand_const = g_gaus(g_gen);
+    //rand_const+=hitPhi;
+    float hitX    = rad*cos(hitPhi);
+    float hitY    = rad*sin(hitPhi);
+
+    float radHit  = sqrt(hitX*hitX+hitY*hitY);
+    float radHit2 = radHit*radHit;
+
+    SVector3 vecXYZ(hitX,hitY,hitZ);
+
+    float varXY = hitposerrXY * hitposerrXY;
+    float varZ  = hitposerrZ * hitposerrZ;
+    SMatrixSym33 covXYZ = ROOT::Math::SMatrixIdentity();
+    //fixme
+    covXYZ(0,0) = varXY*(hitY*hitY)/rad2;
+    covXYZ(1,1) = varXY*(hitX*hitX)/rad2;
+    covXYZ(2,2) = varZ;
+    covXYZ(0,1) = -varXY*(hitX*hitY)/rad2/5.;//fixme
+    covXYZ(1,0) = covXYZ(0,1);
+
+    // covXYZ(0,0) = varXY*(initY*initY)/rad2;
+    // covXYZ(1,1) = varXY*(initX*initX)/rad2;
+    // covXYZ(2,2) = varZ;
+    // // covXYZ(0,1) = -varXY*(initX*initY)/rad2;//fixme
+    // // covXYZ(1,0) = covXYZ(0,1);
+
+    //covXYZ(0,0) = varXY;
+    //covXYZ(1,1) = varXY;
+    //covXYZ(2,2) = varZ;
+
+    
+    //if (dump) 
+    std::cout << "rad:   " << rad   << " rad2: " << rad2 << " radH:  " << radHit << " radH2: " << radHit2 << std::endl
+	      << "initPhi: " << initPhi << " hitPhi: " << hitPhi << std::endl
+	      << "initX: " << initX << " hitX: " << hitX << " initY: " << initY << " hitY: " << hitY << " initZ: " << initZ << " hitZ: " << hitZ << std::endl 
+	      << "varXY: " << varXY << " cov(0,0): " << covXYZ(0,0) << " cov(1,1): " << covXYZ(1,1) << " varZ: " << varZ << " cov(2,2): " << covXYZ(2,2) << std::endl 
+	      << "cov(0,1): " << covXYZ(0,1) << " cov(1,0): " << covXYZ(1,0) << std::endl;
+    dumpMatrix(covXYZ);
+    std::cout << std::endl;
+    
+    Hit hitXYZ(vecXYZ,covXYZ);    
+    hits.push_back(hitXYZ);  
+
+    // SVector3 initVecXYZ(initX,initY,initZ);
+    // Hit initHitXYZ(initVecXYZ,covXYZ);
+    // initHits.push_back(initHitXYZ);
+    
+    tmpState = propState;
+    */
   }
   
   /*
