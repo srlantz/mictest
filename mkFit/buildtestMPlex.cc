@@ -39,9 +39,6 @@ static bool sortByEta(const Hit& hit1, const Hit& hit2){
 static bool sortTracksByEta(const Track& track1, const Track& track2){
   return track1.momEta()<track2.momEta();
 }
-static bool sortTracksByPhi(const Track& track1, const Track& track2){
-  return track1.momPhi()<track2.momPhi();
-}
 struct sortTracksByPhiStruct {
   std::vector<std::vector<Track> >* track_candidates;
   sortTracksByPhiStruct(std::vector<std::vector<Track> >* track_candidates_) { track_candidates=track_candidates_; }
@@ -54,6 +51,19 @@ struct sortTracksByPhiStruct {
 static bool sortByZ(const Hit& hit1, const Hit& hit2){
   return hit1.z()<hit2.z();
 }
+
+float phiFromLinearProjectionAtR(float momPhi, float startX, float startY, float targetR) {
+  //O(10-4) precision for 10. GeV
+  //O(10-2) precision for 0.5 GeV
+  float startR = sqrt(startX*startX + startY*startY);
+  float deltaR = targetR-startR;
+  float posPhi = getPhiFast(startX,startY);
+  float deltaPhi = posPhi-momPhi;
+  deltaR/=(1-deltaPhi*1-deltaPhi/2.);
+  float targetX = startX+deltaR*cos(momPhi);
+  float targetY = startY+deltaR*sin(momPhi);
+  return getPhiFast(targetX,targetY);
+  }
 
 
 double runBuildingTest(std::vector<Track>& evt_sim_tracks/*, std::vector<Track>& rectracks*/) {
@@ -875,6 +885,8 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
    {
      event_of_cands.InsertCandidate(recseeds[iseed]);
    }
+   //... and sort them in phi in each bin
+   event_of_cands.SortCandsInPhi();
 
    //dump seeds
 #ifdef DEBUG
@@ -904,6 +916,15 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
      // vectorized loop
      EtaBinOfCandidates &etabin_of_candidates = event_of_cands.m_etabins_of_candidates[ebin];
 
+     /*
+     //make a local copy for this eta bin, just for fun
+     std::vector<BunchOfHits> my_dumb_copy_of_bunchOfHits(event_of_hits.m_n_layers);
+     for (int ilay = nhits_per_seed; ilay < event_of_hits.m_n_layers; ++ilay)
+       {
+	 my_dumb_copy_of_bunchOfHits[ilay] = event_of_hits.m_layers_of_hits[ilay].m_bunches_of_hits[ebin];
+       }
+     */
+
      for (int itrack = 0; itrack < etabin_of_candidates.m_fill_index; itrack += NN)
        {
 	 int end = std::min(itrack + NN, etabin_of_candidates.m_fill_index);
@@ -925,16 +946,21 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 	 for (int ilay = nhits_per_seed; ilay < event_of_hits.m_n_layers; ++ilay)
 	   {
 	     BunchOfHits &bunch_of_hits = event_of_hits.m_layers_of_hits[ilay].m_bunches_of_hits[ebin];	     
+	     //BunchOfHits &bunch_of_hits = my_dumb_copy_of_bunchOfHits[ilay];
 	     	 
          //propagate to layer
 #ifdef DEBUG
+	     float phiFromLine = phiFromLinearProjectionAtR(getPhi(mkfp->getPar(0, 0, 3),mkfp->getPar(0, 0, 4)), mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1), 4.*(ilay+1));
 	     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
-		       << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+		       << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) 
+		       << " phiFromLine=" << phiFromLine
+		       << std::endl;
 #endif
 	     mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
 	 
 #ifdef DEBUG
-	     std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
+	     std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << " phi=" << getPhi(mkfp->getPar(0, 1, 0),mkfp->getPar(0, 1, 1)) << std::endl;
+	     std::cout << "error by phiFromLine=" << phiFromLine-getPhi(mkfp->getPar(0, 1, 0),mkfp->getPar(0, 1, 1)) << std::endl;
 	     std::cout << "now get hit range" << std::endl;
 #endif
 	   

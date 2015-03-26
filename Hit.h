@@ -101,6 +101,20 @@ inline float getPhi(float x, float y)
   return std::atan2(y,x); 
 }
 
+inline float getPhiFast(float x, float y)
+{
+  //from http://math.stackexchange.com/questions/1098487/atan2-faster-approximation
+  //need to check this is actually faster
+  //need to check what is the precision
+  float a = std::min(fabs(x), fabs(y)) / std::max(fabs(x), fabs(y));
+  float s = a * a;
+  float r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a;
+  if (fabs(y) > fabs(x)) r = 1.57079637 - r;
+  if (x < 0) r = 3.14159274 - r;
+  if (y < 0) r = -r;
+  return r;
+}
+
 inline float getEta(float x, float y, float z)
 {
   float theta = atan2( std::sqrt(x*x+y*y), z );

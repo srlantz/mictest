@@ -42,6 +42,10 @@ inline bool sortByPhiMT(const Hit& hit1, const Hit& hit2)
   return std::atan2(hit1.position()[1],hit1.position()[0])<std::atan2(hit2.position()[1],hit2.position()[0]);
 }
 
+static bool sortTracksByPhi(const Track& track1, const Track& track2){
+  return track1.momPhi()<track2.momPhi();
+}
+
 //==============================================================================
 
 class BunchOfHits
@@ -214,6 +218,11 @@ public:
     m_candidates[m_fill_index] = track;
     ++m_fill_index;
   }
+
+  void SortCandsInPhi() {
+    std::sort(m_candidates.begin(),m_candidates.begin()+m_fill_index,sortTracksByPhi);
+  }
+
 };
 
 class EventOfCandidates
@@ -233,6 +242,14 @@ public:
       i.Reset();
     }
   }
+
+  void SortCandsInPhi() {
+    for (auto &i : m_etabins_of_candidates)
+      {
+	i.SortCandsInPhi();
+      }
+  }
+
 
   void InsertCandidate(const Track& track)
   {
