@@ -1208,6 +1208,14 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
   //   //std::sort(simtracks.begin() + firstEtaSeedBinIdx, simtracks.begin() + (etaBinSize+firstEtaSeedBinIdx), sortTracksByPhi); // sort from first to last in eta
   // }
 
+  // XXXX MT: hacking in prefetchin thread
+  MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
+#if defined(__MIC__)
+  mkfp->PinThisThreadAndSpawnPrefetcher(1, 2);
+#else
+  mkfp->PinThisThreadAndSpawnPrefetcher(8, 20);
+#endif
+
 #ifdef USE_VTUNE_PAUSE
   __itt_resume();
 #endif
@@ -1270,8 +1278,9 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
   //parallel section over seeds; num_threads can of course be smaller
   int nseeds=recseeds.size();
   //#pragma omp parallel num_threads(Config::nEtaBin)
-#pragma omp parallel num_threads(1)//fixme: set to one for debugging (to be revisited anyway - what if there are more threads than eta bins?)
-   for (int ebin = 0; ebin < Config::nEtaBin; ++ebin)
+  //#pragma omp parallel num_threads(1)//fixme: set to one for debugging (to be revisited anyway - what if there are more threads than eta bins?)
+
+  for (int ebin = 0; ebin < Config::nEtaBin; ++ebin)
    {
      // XXXX Could have nested paralellism, like NUM_THREADS/nEtaBins (but rounding sucks here).
      // XXXX So one should really have TBB, for this and for the above.
@@ -1280,14 +1289,23 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 
      for (int itrack = 0; itrack < etabin_of_candidates.m_fill_index; itrack += NN)
        {
-	 int end = std::min(itrack + NN, etabin_of_candidates.m_fill_index);
+          {
+             std::unique_lock<std::mutex> lk(mkfp->m_moo);
+             // m_pf_arr  = varr;
+             mkfp->m_pf_done = false;
+             mkfp->m_bunch_of_hits = & event_of_hits.m_layers_of_hits[nhits_per_seed].m_bunches_of_hits[ebin];
+             mkfp->m_cnd.notify_one();
+          }
+
+
+          int end = std::min(itrack + NN, etabin_of_candidates.m_fill_index);
 	 
 #ifdef DEBUG
          std::cout << std::endl;
 	 std::cout << "processing track=" << itrack << " etabin=" << ebin << " findex=" << etabin_of_candidates.m_fill_index << " thn=" << omp_get_thread_num() << std::endl;
 #endif
-
-	 MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
+         // XXXX MT: hacking in prefetchin thread
+	 // MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
 
 	 mkfp->SetNhits(3);//just to be sure (is this needed?)
 
@@ -1307,6 +1325,14 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
              // {
              //   _mm_prefetch((char*) & bunch_of_hits.m_hits[i], _MM_HINT_T1);
              // }
+             if (ilay + 1 < event_of_hits.m_n_layers)
+             {
+                std::unique_lock<std::mutex> lk(mkfp->m_moo);
+                // m_pf_arr  = varr;
+                mkfp->m_pf_done = false;
+                mkfp->m_bunch_of_hits = & event_of_hits.m_layers_of_hits[ilay + 1].m_bunches_of_hits[ebin];
+                mkfp->m_cnd.notify_one();
+             }
 
              //propagate to layer
 #ifdef DEBUG
@@ -1345,6 +1371,8 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 #endif
 
    time = dtime() - time;
+
+   mkfp->JoinPrefetcher();
 
    //dump tracks
    //std::cout << "found total tracks=" << recseeds.size() << std::endl;

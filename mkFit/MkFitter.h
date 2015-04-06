@@ -7,7 +7,12 @@
 
 #include "HitStructures.h"
 
+#include <thread>
+#include <condition_variable>
+
 //#define DEBUG 1
+
+class BunchOfHits;
 
 class MkFitter
 {
@@ -98,6 +103,25 @@ public:
 
   void SelectHitRanges(BunchOfHits &bunch_of_hits);
   void AddBestHit     (BunchOfHits &bunch_of_hits);
+
+
+  // ================================================================
+  // Wierd stuff
+  // ================================================================
+
+  std::thread              m_prefetcher;
+  std::mutex               m_moo;
+  std::condition_variable  m_cnd;
+  const char              *m_pf_arr;
+  int                      m_pf_idx[NN] __attribute__((aligned(64)));
+  BunchOfHits             *m_bunch_of_hits;
+  bool                     m_pf_done;
+  bool                     m_pf_exit = false;
+
+  void PinThisThreadAndSpawnPrefetcher(int cpuid, int cpuid_pref);
+  void JoinPrefetcher();
+  
+  void Prefetcher(int cpuid);
 };
 
 #endif

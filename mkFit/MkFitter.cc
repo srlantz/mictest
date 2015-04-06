@@ -684,7 +684,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
   const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
 
-  int idx[NN]      __attribute__((aligned(64)));
+  // int idx[NN]      __attribute__((aligned(64)));
+  int *idx  = m_pf_idx;
   int idx_chew[NN] __attribute__((aligned(64)));
 
   int maxSize = -1;
@@ -723,12 +724,18 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   {
     //fixme what if size is zero???
 
+    // {
+    //   std::unique_lock<std::mutex> lk(m_moo);
+    //   m_pf_arr  = varr;
+    //   m_pf_done = false;
+    //   m_cnd.notify_one();
+    // }
     // Prefetch to L2 the hits we'll process after two loops iterations.
     // Ideally this would be initiated before coming here, for whole bunch_of_hits.m_hits vector.
-    for (int itrack = 0; itrack < NN; ++itrack)
-    {
-      _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
-    }
+    // for (int itrack = 0; itrack < NN; ++itrack)
+    // {
+    //   _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
+    // }
 
 #if defined(MIC_INTRINSICS)
     msErr[Nhits].SlurpIn(varr + off_error, vi);
@@ -755,7 +762,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     MPlexQF outChi2;
     computeChi2MPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], outChi2);
 
-    // Prefetch to L1 the hits we'll process in the next loop iteration.
+    // Prefetch to L1 the hits we'll process next ...
     for (int itrack = 0; itrack < NN; ++itrack)
     {
       _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
@@ -828,4 +835,84 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 			Err[iC], Par[iC]);
 
   //std::cout << "Par[iP](0,0,0)=" << Par[iP](0,0,0) << " Par[iC](0,0,0)=" << Par[iC](0,0,0)<< std::endl;
+}
+
+
+//==============================================================================
+// Wierd stuff
+//==============================================================================
+
+#include <sched.h>
+
+namespace
+{
+  void pin_this_thread(int loc_id)
+  {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(loc_id, &cpuset);
+    sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+  }
+}
+
+void MkFitter::PinThisThreadAndSpawnPrefetcher(int cpuid, int cpuid_pref)
+{
+  pin_this_thread(cpuid);
+
+  {
+    std::unique_lock<std::mutex> lk(m_moo);
+
+    m_prefetcher = std::thread([=] { this->Prefetcher(cpuid_pref); });
+
+    m_cnd.wait(lk);
+  }
+}
+
+void MkFitter::JoinPrefetcher()
+{
+  // printf("MkFitter::JoinPrefetcher in cpuid %d\n", sched_getcpu());
+  {
+    std::unique_lock<std::mutex> lk(m_moo);
+    m_pf_exit = true;
+    m_cnd.notify_one();
+  }
+  m_prefetcher.join();
+}
+
+void MkFitter::Prefetcher(int cpuid)
+{
+  pin_this_thread(cpuid);
+
+  std::unique_lock<std::mutex> lk(m_moo);
+
+  m_cnd.notify_one();
+
+  while (true)
+  {
+    m_cnd.wait(lk);
+
+    if (m_pf_exit) break;
+
+    // do work
+    // Prefetch to L2 the hits we'll process after two loops iterations.
+    // for (int itrack = 0; itrack < NN; ++itrack)
+    // {
+    //   _mm_prefetch(m_pf_arr + 2*sizeof(Hit) + m_pf_idx[itrack], _MM_HINT_T1);
+    //}
+    // Prefetch to L1 the hits we'll process in the next loop iteration.
+    // for (int itrack = 0; itrack < NN; ++itrack)
+    // {
+    //   _mm_prefetch(m_pf_arr + sizeof(Hit) + m_pf_idx[itrack], _MM_HINT_T0);
+    // }
+
+    for (int i = 0; i < m_bunch_of_hits->m_fill_index; ++i)
+    {
+      _mm_prefetch((char*) & m_bunch_of_hits->m_hits[i], _MM_HINT_T1);
+    }
+
+    
+    m_pf_done = true;
+  }
+
+  // printf("MkFitter::Prefetcher being joined in cpuid %d\n", sched_getcpu());
 }
