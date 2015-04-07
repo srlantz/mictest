@@ -6,7 +6,12 @@
 #include "Propagation.h"
 #include "Simulation.h"
 
-#include <omp.h>
+// #include <omp.h>
+namespace
+{
+  int omp_get_thread_num() { return 0; }
+  int omp_get_num_threads() { return 1; }
+}
 
 #if defined(USE_VTUNE_PAUSE)
 #include "ittnotify.h"
@@ -679,7 +684,6 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
 
    return time;
 }
-
 
 
 

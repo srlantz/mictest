@@ -13,7 +13,12 @@
 #include "TTree.h"
 #endif
 
-#include <omp.h>
+// #include <omp.h>
+namespace
+{
+  int omp_get_thread_num() { return 0; }
+  int omp_get_num_threads() { return 1; }
+}
 
 #include <iostream>
 #include <memory>
