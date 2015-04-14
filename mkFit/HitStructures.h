@@ -273,6 +273,8 @@ public:
       i.SortByPhi();
     }
   }
+
+  void FillTrackPacks(std::vector<std::vector<Track>>& track_packs);
 };
 
 

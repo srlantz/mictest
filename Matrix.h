@@ -108,13 +108,18 @@ inline void sincos4(float x, float& sin, float& cos)
   typedef Matriplex::Matriplex<float, 1, 1, NN>     MPlexQF;
   typedef Matriplex::Matriplex<int,   1, 1, NN>     MPlexQI;
 
+  #ifdef __MIC__
+    #define NUM_THREADS_MAX 120
+  #else
+    #define NUM_THREADS_MAX  24
+  #endif
 
   #ifndef NUM_THREADS
   #define NUM_THREADS 1
   #endif
 
   #ifndef NUM_THREADS_SIM
-  #define NUM_THREADS_SIM 60
+  #define NUM_THREADS_SIM NUM_THREADS_MAX
   #endif
 
   #ifndef THREAD_BINDING
