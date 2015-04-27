@@ -14,7 +14,7 @@
 #include "tbb/task_scheduler_init.h"
 #endif
 
-//#define CYLINDER
+#define CYLINDER
 
 #ifdef WITH_USOLIDS
 #ifdef CYLINDER
@@ -128,9 +128,9 @@ int main(int argc, char** argv)
 
     timepoint t0(now());
     ev.Simulate(Ntracks); ticks[0] += delta(t0);
-    ev.Segment();         ticks[1] += delta(t0);
-    ev.Seed();            ticks[2] += delta(t0);
-    ev.Find();            ticks[3] += delta(t0);
+    // ev.Segment();         ticks[1] += delta(t0);
+    // ev.Seed();            ticks[2] += delta(t0);
+    // ev.Find();            ticks[3] += delta(t0);
     ev.Fit();             ticks[4] += delta(t0);
   }
 
