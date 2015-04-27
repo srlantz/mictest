@@ -3,8 +3,9 @@
 
 VUSolid::EnumInside VUSolid::Inside (const UVector3 &aPoint) const
 {
+  const float tolerance = 0.1;
   double r = aPoint.Perp();
-  if (rin_ < r && r < rout_) return eInside;
+  if ( (rin_-tolerance) < r && r < (rout_+tolerance)) return eInside;
   return eOutside;
 }
 
