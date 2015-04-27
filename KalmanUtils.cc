@@ -1,4 +1,5 @@
 #include "KalmanUtils.h"
+#include "MultipleScattering.h"
 #include "Debug.h"
 
 static const SMatrix36 projMatrix  = ROOT::Math::SMatrixIdentity();
@@ -38,7 +39,7 @@ void updateParameters66(TrackState& propagatedState, MeasurementState& measureme
 //==============================================================================
 
 //see e.g. http://inspirehep.net/record/259509?ln=en
-TrackState updateParameters(const TrackState& propagatedState, const MeasurementState& measurementState)
+TrackState updateParameters(const TrackState& propagatedState, const MeasurementState& measurementState, const Event* ev)
 {
 #ifdef DEBUG
   const bool debug = g_dump;
@@ -60,6 +61,20 @@ TrackState updateParameters(const TrackState& propagatedState, const Measurement
   TrackState result;
   result.parameters = propagatedState.parameters + propErr*projMatrixT*resErrInv*residual;
   result.errors = propErr - ROOT::Math::SimilarityT(propErr,ROOT::Math::SimilarityT(projMatrix,resErrInv));
+#ifdef SCATTERING
+  const float z1 = 1.;
+  const float z2 = 1.;
+  const float phismear = 1./sqrt(2.); // rotation of scattering plane
+  SVector6 deltaPar;
+  applyMultipleScattering(ev->geom_, propagatedState, z1, z2, phismear, deltaPar);
+  result.errors[0][0] += deltaPar[0]*deltaPar[0];
+  result.errors[1][1] += deltaPar[1]*deltaPar[1];
+  result.errors[2][2] += deltaPar[2]*deltaPar[2];
+  result.errors[3][3] += deltaPar[3]*deltaPar[3];
+  result.errors[4][4] += deltaPar[4]*deltaPar[4];
+  result.errors[5][5] += deltaPar[5]*deltaPar[5];
+  //fimxe add off-diagonal terms
+#endif
   result.charge = propagatedState.charge;
   result.valid = propagatedState.valid;
 

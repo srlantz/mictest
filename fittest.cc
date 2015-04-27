@@ -96,7 +96,7 @@ void fitTrack(const Track& trk, const Event& ev)
     MeasurementState measState = hit.measurementState();
  
     TrackState propState = propagateHelixToR(updatedState, hit.r());
-    updatedState = updateParameters(propState, measState);
+    updatedState = updateParameters(propState, measState, &ev);
 
     SVector3 propPos(propState.parameters[0],propState.parameters[1],propState.parameters[2]);
     SVector3 updPos(updatedState.parameters[0],updatedState.parameters[1],updatedState.parameters[2]);
