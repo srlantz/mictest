@@ -55,7 +55,7 @@ void fitTrack(const Track& trk, const Event& ev)
   bool debug(false);
 #endif
 
-#define INWARD
+//#define INWARD
 #if defined(INWARD)
   auto hits(trk.hitsVector());
   std::reverse(hits.begin(), hits.end());
@@ -79,7 +79,10 @@ void fitTrack(const Track& trk, const Event& ev)
   updatedState = propagateHelixToR(updatedState,hits[0].r());
 #endif
   ev.validation_.fillFitStateHists(simStateHit0, cfitStateHit0);
+
+#if defined(ENDTOEND) || defined(CONFORMAL)
   updatedState.errors*=10;
+#endif
 
 #ifdef DEBUG
   if (debug) { 
