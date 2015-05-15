@@ -1889,10 +1889,13 @@ double runBuildingTestPlexMT(std::vector<Track>& simtracks/*, std::vector<Track>
 #endif
 
   std::vector<std::vector<Track>> track_packs;
-  // Wait ... don;t need this ... just beg/end pointers from eb_o_cands
+  // XXXX Finished here: Wait ... don;t need this ... just beg/end pointers from eb_o_cands
+  // XXXX See also HitStructures
 
   event_of_cands.FillTrackPacks(track_packs);
 
+  // With track/seed packs I don't need a separate eta loop afterwards ...
+  
   //loop over eta bins
 #pragama omp parallel for num_threads(Config::nEtaBin)
   for (int ebin = 0; ebin < Config::nEtaBin; ++ebin)

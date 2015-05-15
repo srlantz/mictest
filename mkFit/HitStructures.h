@@ -274,7 +274,7 @@ public:
     }
   }
 
-  void FillTrackPacks(std::vector<std::vector<Track>>& track_packs);
+  void FillTrackPacks(std::vector<std::pair<int, int>>& seed_packs);
 };
 
 
