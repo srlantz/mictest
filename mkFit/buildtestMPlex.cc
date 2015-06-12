@@ -1688,11 +1688,13 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #ifdef DEBUG
 	       std::cout << "make new candidates" << std::endl;
 #endif
-	       mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
+	       //mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
+	       mkfp->FindCandidatesMinimizeCopy(bunch_of_hits,tmp_candidates,th_start_seed);//fixme
 	       
 	     }//end of vectorized loop
 	   
 	   //clean exceeding candidates per seed
+	   //FIXME: is there a reason why these are not vectorized????
 	   for (int is=0;is<tmp_candidates.size();++is)
 	     {
 	       if (tmp_candidates[is].size()>Config::maxCand)

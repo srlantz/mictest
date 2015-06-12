@@ -102,6 +102,10 @@ public:
 
   void FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset);
 
+  typedef std::pair<int,float> idxChi2Pair;
+  /* bool sortHitsByChi2(idxChi2Pair cand1,idxChi2Pair cand2); */
+  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset);
+
 };
 
 #endif
