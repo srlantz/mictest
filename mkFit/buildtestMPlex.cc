@@ -14,6 +14,19 @@
 
 #define PRINTOUTS_FOR_PLOTS
 
+struct NhitsChi2List {
+  int trkIdx;
+  int hitIdx;
+  int nhits;
+  float chi2;
+};
+
+bool sortCandListByHitsChi2(NhitsChi2List cand1,NhitsChi2List cand2)
+{
+  if (cand1.nhits==cand2.nhits) return cand1.chi2<cand2.chi2;
+  return cand1.nhits>cand2.nhits;
+}
+
 bool sortByHitsChi2(std::pair<Track, TrackState> cand1,std::pair<Track, TrackState> cand2)
 {
   if (cand1.first.nHits()==cand2.first.nHits()) return cand1.first.chi2()<cand2.first.chi2();
@@ -486,8 +499,8 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
   for (int ebin = 0; ebin < Config::nEtaBin; ++ebin)
   {
 
-     EtaBinOfCandidates &etabin_of_candidates = event_of_cands.m_etabins_of_candidates[ebin];
-
+   EtaBinOfCandidates &etabin_of_candidates = event_of_cands.m_etabins_of_candidates[ebin];
+  
      for (int itrack = 0; itrack < etabin_of_candidates.m_fill_index; ++itrack)
        {
 	 
@@ -1584,12 +1597,14 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
        int ebin_idx_in_th = thread_num * n_eta_bin_per_th;
        th_start_ebin = ebin_idx_in_th;
        th_end_ebin = th_start_ebin + n_eta_bin_per_th;       
-
      }
 
 #ifdef DEBUG
      omp_set_lock(&writelock);
-     std::cout << "th_start_ebin-a=" << thread_num * n_eta_bin_per_th << " th_end_ebin-a=" << thread_num * n_eta_bin_per_th + n_eta_bin_per_th << " th_start_ebin-b=" << thread_num/n_th_per_eta_bin << " th_end_ebin-b=" << thread_num/n_th_per_eta_bin+1 << std::endl;
+     if (n_th_per_eta_bin>=1)
+       std::cout << "th_start_ebin-a=" << thread_num * n_eta_bin_per_th << " th_end_ebin-a=" << thread_num * n_eta_bin_per_th + n_eta_bin_per_th << " th_start_ebin-b=" << thread_num/n_th_per_eta_bin << " th_end_ebin-b=" << thread_num/n_th_per_eta_bin+1 << std::endl;
+     else 
+       std::cout << "th_start_ebin-a=" << thread_num * n_eta_bin_per_th << " th_end_ebin-a=" << thread_num * n_eta_bin_per_th + n_eta_bin_per_th << std::endl;
      omp_unset_lock(&writelock);
 #endif
 
@@ -1614,7 +1629,10 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 
 #ifdef DEBUG
        omp_set_lock(&writelock);
-       std::cout << "th_start_seed-a=" << 0 << " th_end_seed-a=" << etabin_of_comb_candidates.m_fill_index << " th_start_seed-b=" << (thread_num % n_th_per_eta_bin) * nseeds_ebin / n_th_per_eta_bin << " th_end_seed-b=" << std::min( ( (thread_num % n_th_per_eta_bin)+ 1) * nseeds_ebin / n_th_per_eta_bin, nseeds_ebin ) << std::endl;       
+       if (n_th_per_eta_bin>=1)
+	 std::cout << "th_start_seed-a=" << 0 << " th_end_seed-a=" << etabin_of_comb_candidates.m_fill_index << " th_start_seed-b=" << (thread_num % n_th_per_eta_bin) * nseeds_ebin / n_th_per_eta_bin << " th_end_seed-b=" << std::min( ( (thread_num % n_th_per_eta_bin)+ 1) * nseeds_ebin / n_th_per_eta_bin, nseeds_ebin ) << std::endl;
+       else
+	 std::cout << "th_start_seed-a=" << 0 << " th_end_seed-a=" << etabin_of_comb_candidates.m_fill_index << std::endl;
        omp_unset_lock(&writelock);
 #endif
 
@@ -1639,7 +1657,12 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	     }
 	   int theEndCand = seed_cand_idx.size();     
 	   
-	   std::vector<std::vector<Track> > tmp_candidates(th_end_seed-th_start_seed);     
+	   int th_n_seeds = th_end_seed-th_start_seed;
+
+#ifdef TEST_CLONE_ENGINE
+	   std::vector<MkFitter::IdxChi2List> hitsToAdd[th_n_seeds];
+#else
+	   std::vector<std::vector<Track> > tmp_candidates(th_n_seeds);
 	   for (int iseed=0;iseed<tmp_candidates.size();++iseed)
            {
              // XXXX MT: Tried adding 25 to reserve below as I was seeing some
@@ -1648,7 +1671,7 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
              // candidate once a better one arrives. This will also avoid sorting.
 	     tmp_candidates[iseed].reserve(2*Config::maxCand);//factor 2 seems reasonable to start with
 	   }
-	   
+#endif	   
 	   //vectorized loop
 	   for (int itrack = 0; itrack < theEndCand; itrack += NN)
 	     {
@@ -1688,23 +1711,105 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #ifdef DEBUG
 	       std::cout << "make new candidates" << std::endl;
 #endif
-	       //mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
-	       mkfp->FindCandidatesMinimizeCopy(bunch_of_hits,tmp_candidates,th_start_seed);//fixme
+
+#ifdef TEST_CLONE_ENGINE
+	       mkfp->FindCandidatesMinimizeCopy(bunch_of_hits,hitsToAdd,th_start_seed);
+#else
+	       mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
+#endif
 	       
 	     }//end of vectorized loop
-	   
+
+#ifdef TEST_CLONE_ENGINE
+	   //----------------------- BEGIN CLONE ENGINE -----------------------//
+	   //now we should figure out which maxCand candidates per seed to create
+	   //will have to define a strategy to vectorize this
+	   //then also ship to a separate thread	   
+	   std::vector<Track> cands_for_next_lay;
+	   cands_for_next_lay.reserve(Config::maxCand);
+	   for (int is=0;is<th_n_seeds;++is)
+	     {
+	       std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = hitsToAdd[is];
+#ifdef DEBUG
+	       std::cout << "dump seed n " << is << " with input candidates=" << hitsToAddForThisSeed.size() << std::endl;
+	       for (int ih=0;ih<hitsToAddForThisSeed.size();ih++)
+		 {
+		   std::cout << "trkIdx=" << hitsToAddForThisSeed[ih].trkIdx << " hitIdx=" << hitsToAddForThisSeed[ih].hitIdx << " chi2=" <<  hitsToAddForThisSeed[ih].chi2 << std::endl;
+		   std::cout << "original pt=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].pT() << " " 
+			     << "nHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHits() << " " 
+			     << "nHitIdx=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHitIdx() << " " 
+			     << "chi2=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].chi2() << " " 
+			     << std::endl;
+		 }
+#endif	     
+	       //now fill another list with the actual variables needed for sorting, then sort it
+	       //actually this can be done smarter, we are now duplicating some info
+	       std::vector<NhitsChi2List> candListForThisSeed(hitsToAddForThisSeed.size());
+	       for (int ih=0;ih<hitsToAddForThisSeed.size();ih++)
+		 {
+		   Track& oldCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx];//no copy here
+		   NhitsChi2List& tmpList = candListForThisSeed[ih];
+		   tmpList.trkIdx = hitsToAddForThisSeed[ih].trkIdx;
+		   tmpList.hitIdx = hitsToAddForThisSeed[ih].hitIdx;
+		   tmpList.nhits = oldCand.nHitIdx();
+		   if (tmpList.hitIdx>=0) tmpList.nhits++;
+		   tmpList.chi2 = oldCand.chi2()+hitsToAddForThisSeed[ih].chi2;
+		 }
+	       //sort the damn thing
+	       std::sort(candListForThisSeed.begin(), candListForThisSeed.end(), sortCandListByHitsChi2);
+	       //now create the candidate for the best maxCand
+	       for (int ih=0;ih<candListForThisSeed.size() && ih<Config::maxCand;ih++)
+		 {
+		   Track newCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][candListForThisSeed[ih].trkIdx];//make sure this is a copy
+#ifdef DEBUG
+		   std::cout << "after sorting cand with nhits=" << newCand.nHitIdx() << std::endl;
+#endif
+		   if (candListForThisSeed[ih].hitIdx>=0) {
+		     TrackState initState = newCand.state();
+		     MeasurementState measState = bunch_of_hits.m_hits[ candListForThisSeed[ih].hitIdx ].measurementState();
+		     float r = sqrt(measState.parameters.At(0)*measState.parameters.At(0) + measState.parameters.At(1)*measState.parameters.At(1));
+#ifdef DEBUG
+		     std::cout << "radius=" << newCand.posR() << " " << r << std::endl;
+#endif
+		     TrackState updatedState = updateParameters(propagateHelixToR(initState, r),measState);
+		     newCand.setState(updatedState);
+		   }
+		   newCand.addHitIdx(candListForThisSeed[ih].hitIdx,0.);
+		   newCand.setChi2(candListForThisSeed[ih].chi2);
+		   cands_for_next_lay.push_back(newCand);
+		 }
+#ifdef DEBUG
+	       std::cout << "dump seed n " << is << " with output candidates=" << cands_for_next_lay.size() << std::endl;
+#endif
+	       if (cands_for_next_lay.size()>0) {
+		 etabin_of_comb_candidates.m_candidates[th_start_seed+is].swap(cands_for_next_lay);
+		 cands_for_next_lay.clear();
+	       }
+	     }
+	   //----------------------- END CLONE ENGINE -----------------------//
+#else //TEST_CLONE_ENGINE
 	   //clean exceeding candidates per seed
 	   //FIXME: is there a reason why these are not vectorized????
 	   for (int is=0;is<tmp_candidates.size();++is)
 	     {
+#ifdef DEBUG
+	       std::cout << "dump seed n " << is << " with input candidates=" << tmp_candidates[is].size() << std::endl;
+#endif
 	       if (tmp_candidates[is].size()>Config::maxCand)
 		 {
 #ifdef DEBUG
+		   std::cout << "erase extra candidates" 
+			     << " tmp_candidates[is].size()=" << tmp_candidates[is].size()
+			     << " Config::maxCand=" << Config::maxCand
+			     << std::endl;
 		   std::cout << "erase extra candidates" << std::endl;
 #endif	     
 		   std::sort(tmp_candidates[is].begin(), tmp_candidates[is].end(), sortCandByHitsChi2);
 		   tmp_candidates[is].erase(tmp_candidates[is].begin()+Config::maxCand,tmp_candidates[is].end());
 		 }
+#ifdef DEBUG
+	       std::cout << "dump seed n " << is << " with output candidates=" << tmp_candidates[is].size() << std::endl;
+#endif
 	     } 
 	   //now swap with input candidates
 	   for (int is=0;is<tmp_candidates.size();++is)
@@ -1719,6 +1824,7 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 		   //we do nothing in the SM version here, I think we should put these in the output and avoid keeping looping over them
 		 }
 	     }
+#endif //TEST_CLONE_ENGINE    
 	   
 	 }//end of layer loop
 

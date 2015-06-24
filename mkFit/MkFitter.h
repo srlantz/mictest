@@ -8,6 +8,7 @@
 #include "HitStructures.h"
 
 //#define DEBUG 1
+#define TEST_CLONE_ENGINE
 
 class MkFitter
 {
@@ -23,6 +24,7 @@ class MkFitter
 
   MPlexQI Label;  //this is the seed index in global seed vector (for MC truth match)
   MPlexQI SeedIdx;//this is the seed index in local thread (for bookkeeping at thread level)
+  MPlexQI CandIdx;//this is the candidate index for the given seed (for bookkeeping of clone engine)
   MPlexQI HitsIdx[MAX_HITS];
 
   // Hold hit indices to explore at current layer.
@@ -102,9 +104,14 @@ public:
 
   void FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset);
 
+  struct IdxChi2List {
+    int trkIdx;
+    int hitIdx;
+    float chi2;
+  };
   typedef std::pair<int,float> idxChi2Pair;
-  /* bool sortHitsByChi2(idxChi2Pair cand1,idxChi2Pair cand2); */
-  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset);
+  bool sortHitsByChi2(idxChi2Pair cand1,idxChi2Pair cand2) {return cand1.second>cand2.second;}
+  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<IdxChi2List>* hitsToAdd, int offset);
 
 };
 

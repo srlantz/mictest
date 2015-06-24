@@ -99,6 +99,7 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
 
     Label(itrack, 0, 0) = trk.label();
     SeedIdx(itrack, 0, 0) = idxs[i].first;
+    CandIdx(itrack, 0, 0) = idxs[i].second;
 
     Err[iC].CopyIn(itrack, trk.errors().Array());
     Par[iC].CopyIn(itrack, trk.parameters().Array());
@@ -1033,17 +1034,11 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 }
 
 
-
-
-bool sortHitsByChi2(MkFitter::idxChi2Pair cand1,MkFitter::idxChi2Pair cand2)
-{
-  return cand1.second>cand2.second;
-}
-void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset)
+void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<MkFitter::IdxChi2List>* hitsToAdd, int offset)
 {
 
-  //an array of vectors, i.e. we knoe the size of NN but for now we add all hits passing the chi2 cut
-  std::vector<MkFitter::idxChi2Pair> hitsToAdd[NN];
+  //an array of vectors, i.e. we know the size of NN and for now we add all hits passing the chi2 cut
+  //std::vector<MkFitter::idxChi2Pair> hitsToAdd[NN];
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
@@ -1134,27 +1129,40 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
       {
 	float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
 #ifdef DEBUG
-	std::cout << "chi2=" << chi2 << std::endl;
+	std::cout << "chi2=" << chi2 << " for trkIdx=" << itrack << std::endl;
 #endif
 	if (chi2 < Config::chi2Cut) 
 	  {
-	    hitsToAdd[itrack].push_back(std::pair<int, float>(chi2,hit_cnt));
+	    IdxChi2List tmpList;
+	    tmpList.trkIdx = CandIdx(itrack, 0, 0);
+	    tmpList.hitIdx = XHitBegin.At(itrack, 0, 0) + hit_cnt;
+	    tmpList.chi2 = chi2;
+	    hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+#ifdef DEBUG
+	    std::cout << "adding hit with hit_cnt=" << hit_cnt << " for trkIdx=" << tmpList.trkIdx << std::endl;
+#endif
 	  }
       }
     
   }//end loop over hits
-  
+
+  /*  
   //now sort the hitsToAdd vector
 #pragma simd
   for (int itrack = 0; itrack < NN; ++itrack)
     {
-      std::sort(hitsToAdd[itrack].begin(), hitsToAdd[itrack].end(),  sortHitsByChi2);
+      std::sort(hitsToAdd[itrack].begin(), hitsToAdd[itrack].end(), sortHitsByChi2);
     }
-  
+
   //create candidates for the best maxCand hits
 #pragma simd
   for (int itrack = 0; itrack < NN; ++itrack)
     {
+
+      std::cout << "before hitsToAdd[itrack].size()=" << hitsToAdd[itrack].size() 
+		<< " tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()=" << tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()
+		<< " Config::maxCand=" << Config::maxCand
+		<< std::endl;
       
       for (int iHitIdx = 0; iHitIdx<Config::maxCand && iHitIdx<hitsToAdd[itrack].size(); ++iHitIdx)
 	{
@@ -1169,7 +1177,12 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
 	  
 #ifdef DEBUG
 	  std::cout << "creating new candidate" << std::endl;
+	  std::cout << "update parameters" << std::endl;
+	  std::cout << "propagated track parameters x=" << Par[iP].ConstAt(0, 0, 0) << " y=" << Par[iP].ConstAt(0, 1, 0) << std::endl;
+	  std::cout << "               hit position x=" << msPar[Nhits].ConstAt(0, 0, 0) << " y=" << msPar[Nhits].ConstAt(0, 1, 0) << std::endl;
+	  std::cout << "   updated track parameters x=" << Par[iC].ConstAt(0, 0, 0) << " y=" << Par[iC].ConstAt(0, 1, 0) << std::endl;
 #endif
+
 	  //create a new candidate and fill the reccands_tmp vector
 	  Track newcand;
 	  newcand.resetHits();//probably not needed
@@ -1191,27 +1204,30 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
 	  
 	  tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
 	}
+
+      std::cout << "hitsToAdd[itrack].size()=" << hitsToAdd[itrack].size() 
+		<< " tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()=" << tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()
+		<< " Config::maxCand=" << Config::maxCand
+		<< std::endl;
+
     }
+  */
 
   //now add invalid hit
   //fixme: please vectorize me...
   for (int itrack = 0; itrack < NN;++itrack)
     {
+#ifdef DEBUG
+      std::cout << "countInvalidHits(itrack)=" << countInvalidHits(itrack) << std::endl;
+#endif
       if (countInvalidHits(itrack)>0) continue;//check this is ok for vectorization //fixme not optimal
-      Track newcand;
-      newcand.resetHits();//probably not needed
-      newcand.setCharge(Chg(itrack, 0, 0));
-      newcand.setChi2(Chi2(itrack, 0, 0));
-      for (int hi = 0; hi < Nhits; ++hi)
-	{
-	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
-	}
-      newcand.addHitIdx(-1,0.);
-      newcand.setLabel(Label(itrack, 0, 0));
-      //set the track state to the propagated parameters
-      Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
-      Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
-      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
+      IdxChi2List tmpList;
+      tmpList.trkIdx = CandIdx(itrack, 0, 0);
+      tmpList.hitIdx = -1;
+      tmpList.chi2 = 0.;
+      hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+#ifdef DEBUG
+      std::cout << "adding invalid hit" << std::endl;
+#endif
     }
-
 }
