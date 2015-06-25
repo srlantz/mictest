@@ -116,6 +116,16 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
   }
 }
 
+int MkFitter::countValidHits(int itrack)
+{
+  int result = 0;
+  for (int hi = 0; hi < Nhits; ++hi)
+    {
+      if (HitsIdx[hi](itrack, 0, 0)>=0) result++;
+    }
+  return result;
+}
+
 int MkFitter::countInvalidHits(int itrack)
 {
   int result = 0;
@@ -1136,7 +1146,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
 	    IdxChi2List tmpList;
 	    tmpList.trkIdx = CandIdx(itrack, 0, 0);
 	    tmpList.hitIdx = XHitBegin.At(itrack, 0, 0) + hit_cnt;
-	    tmpList.chi2 = chi2;
+	    tmpList.nhits = countValidHits(itrack)+1;
+	    tmpList.chi2 = Chi2(itrack, 0, 0)+chi2;
 	    hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
 	    std::cout << "adding hit with hit_cnt=" << hit_cnt << " for trkIdx=" << tmpList.trkIdx << std::endl;
@@ -1145,73 +1156,6 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
       }
     
   }//end loop over hits
-
-  /*  
-  //now sort the hitsToAdd vector
-#pragma simd
-  for (int itrack = 0; itrack < NN; ++itrack)
-    {
-      std::sort(hitsToAdd[itrack].begin(), hitsToAdd[itrack].end(), sortHitsByChi2);
-    }
-
-  //create candidates for the best maxCand hits
-#pragma simd
-  for (int itrack = 0; itrack < NN; ++itrack)
-    {
-
-      std::cout << "before hitsToAdd[itrack].size()=" << hitsToAdd[itrack].size() 
-		<< " tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()=" << tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()
-		<< " Config::maxCand=" << Config::maxCand
-		<< std::endl;
-      
-      for (int iHitIdx = 0; iHitIdx<Config::maxCand && iHitIdx<hitsToAdd[itrack].size(); ++iHitIdx)
-	{
-
-	  Hit   &hit  = bunch_of_hits.m_hits[ XHitBegin.At(itrack, 0, 0) + hitsToAdd[itrack][iHitIdx].first ];
-	  float &chi2 = hitsToAdd[itrack][iHitIdx].second;
-	 	  
-	  msErr[Nhits].CopyIn(itrack, hit.error().Array());
-	  msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
-
-	  updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
-	  
-#ifdef DEBUG
-	  std::cout << "creating new candidate" << std::endl;
-	  std::cout << "update parameters" << std::endl;
-	  std::cout << "propagated track parameters x=" << Par[iP].ConstAt(0, 0, 0) << " y=" << Par[iP].ConstAt(0, 1, 0) << std::endl;
-	  std::cout << "               hit position x=" << msPar[Nhits].ConstAt(0, 0, 0) << " y=" << msPar[Nhits].ConstAt(0, 1, 0) << std::endl;
-	  std::cout << "   updated track parameters x=" << Par[iC].ConstAt(0, 0, 0) << " y=" << Par[iC].ConstAt(0, 1, 0) << std::endl;
-#endif
-
-	  //create a new candidate and fill the reccands_tmp vector
-	  Track newcand;
-	  newcand.resetHits();//probably not needed
-	  newcand.setCharge(Chg(itrack, 0, 0));
-	  newcand.setChi2(Chi2(itrack, 0, 0));
-	  for (int hi = 0; hi < Nhits; ++hi)
-	    {
-	      newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
-	    }
-	  newcand.addHitIdx(XHitBegin.At(itrack, 0, 0) + hitsToAdd[itrack][iHitIdx].first,chi2);
-	  newcand.setLabel(Label(itrack, 0, 0));
-	  //set the track state to the updated parameters
-	  Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
-	  Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
-	  
-#ifdef DEBUG
-	  std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
-#endif
-	  
-	  tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
-	}
-
-      std::cout << "hitsToAdd[itrack].size()=" << hitsToAdd[itrack].size() 
-		<< " tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()=" << tmp_candidates[SeedIdx(itrack, 0, 0)-offset].size()
-		<< " Config::maxCand=" << Config::maxCand
-		<< std::endl;
-
-    }
-  */
 
   //now add invalid hit
   //fixme: please vectorize me...
@@ -1224,7 +1168,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
       IdxChi2List tmpList;
       tmpList.trkIdx = CandIdx(itrack, 0, 0);
       tmpList.hitIdx = -1;
-      tmpList.chi2 = 0.;
+      tmpList.nhits = countValidHits(itrack);
+      tmpList.chi2 = Chi2(itrack, 0, 0);
       hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
       std::cout << "adding invalid hit" << std::endl;

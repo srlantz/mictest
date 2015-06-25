@@ -14,14 +14,7 @@
 
 #define PRINTOUTS_FOR_PLOTS
 
-struct NhitsChi2List {
-  int trkIdx;
-  int hitIdx;
-  int nhits;
-  float chi2;
-};
-
-bool sortCandListByHitsChi2(NhitsChi2List cand1,NhitsChi2List cand2)
+bool sortCandListByHitsChi2(MkFitter::IdxChi2List cand1,MkFitter::IdxChi2List cand2)
 {
   if (cand1.nhits==cand2.nhits) return cand1.chi2<cand2.chi2;
   return cand1.nhits>cand2.nhits;
@@ -1742,31 +1735,18 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 			     << std::endl;
 		 }
 #endif	     
-	       //now fill another list with the actual variables needed for sorting, then sort it
-	       //actually this can be done smarter, we are now duplicating some info
-	       std::vector<NhitsChi2List> candListForThisSeed(hitsToAddForThisSeed.size());
-	       for (int ih=0;ih<hitsToAddForThisSeed.size();ih++)
-		 {
-		   Track& oldCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx];//no copy here
-		   NhitsChi2List& tmpList = candListForThisSeed[ih];
-		   tmpList.trkIdx = hitsToAddForThisSeed[ih].trkIdx;
-		   tmpList.hitIdx = hitsToAddForThisSeed[ih].hitIdx;
-		   tmpList.nhits = oldCand.nHitIdx();
-		   if (tmpList.hitIdx>=0) tmpList.nhits++;
-		   tmpList.chi2 = oldCand.chi2()+hitsToAddForThisSeed[ih].chi2;
-		 }
 	       //sort the damn thing
-	       std::sort(candListForThisSeed.begin(), candListForThisSeed.end(), sortCandListByHitsChi2);
+	       std::sort(hitsToAddForThisSeed.begin(), hitsToAddForThisSeed.end(), sortCandListByHitsChi2);
 	       //now create the candidate for the best maxCand
-	       for (int ih=0;ih<candListForThisSeed.size() && ih<Config::maxCand;ih++)
+	       for (int ih=0;ih<hitsToAddForThisSeed.size() && ih<Config::maxCand;ih++)
 		 {
-		   Track newCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][candListForThisSeed[ih].trkIdx];//make sure this is a copy
+		   Track newCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx];//make sure this is a copy
 #ifdef DEBUG
 		   std::cout << "after sorting cand with nhits=" << newCand.nHitIdx() << std::endl;
 #endif
-		   if (candListForThisSeed[ih].hitIdx>=0) {
+		   if (hitsToAddForThisSeed[ih].hitIdx>=0) {
 		     TrackState initState = newCand.state();
-		     MeasurementState measState = bunch_of_hits.m_hits[ candListForThisSeed[ih].hitIdx ].measurementState();
+		     MeasurementState measState = bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ].measurementState();
 		     float r = sqrt(measState.parameters.At(0)*measState.parameters.At(0) + measState.parameters.At(1)*measState.parameters.At(1));
 #ifdef DEBUG
 		     std::cout << "radius=" << newCand.posR() << " " << r << std::endl;
@@ -1774,8 +1754,8 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 		     TrackState updatedState = updateParameters(propagateHelixToR(initState, r),measState);
 		     newCand.setState(updatedState);
 		   }
-		   newCand.addHitIdx(candListForThisSeed[ih].hitIdx,0.);
-		   newCand.setChi2(candListForThisSeed[ih].chi2);
+		   newCand.addHitIdx(hitsToAddForThisSeed[ih].hitIdx,0.);
+		   newCand.setChi2(hitsToAddForThisSeed[ih].chi2);
 		   cands_for_next_lay.push_back(newCand);
 		 }
 #ifdef DEBUG

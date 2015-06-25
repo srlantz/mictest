@@ -87,6 +87,7 @@ public:
   void SetNhits(int newnhits) { Nhits=newnhits; }
 
   int countInvalidHits(int itrack);
+  int countValidHits(int itrack);
 
   float getPar(int itrack, int i, int par) { return Par[i].ConstAt(itrack, 0, par); }
 
@@ -107,6 +108,7 @@ public:
   struct IdxChi2List {
     int trkIdx;
     int hitIdx;
+    int nhits;
     float chi2;
   };
   typedef std::pair<int,float> idxChi2Pair;
