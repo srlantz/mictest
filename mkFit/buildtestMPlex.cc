@@ -1718,8 +1718,6 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	   //now we should figure out which maxCand candidates per seed to create
 	   //will have to define a strategy to vectorize this
 	   //then also ship to a separate thread	   
-	   std::vector<Track> cands_for_next_lay;
-	   cands_for_next_lay.reserve(Config::maxCand);
 	   for (int is=0;is<th_n_seeds;++is)
 	     {
 	       std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = hitsToAdd[is];
@@ -1737,34 +1735,61 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #endif	     
 	       //sort the damn thing
 	       std::sort(hitsToAddForThisSeed.begin(), hitsToAddForThisSeed.end(), sortCandListByHitsChi2);
-	       //now create the candidate for the best maxCand
+	     }
+	   //now create the candidate for the best maxCand, we'll try to do it vectorized with MkFitter
+	   //first we need to unroll the vectors
+	   std::vector<std::pair<int,MkFitter::IdxChi2List> > seed_newcand_idx;
+	   for (int is=0;is<th_n_seeds;++is)
+	     {
+	       std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = hitsToAdd[is];
 	       for (int ih=0;ih<hitsToAddForThisSeed.size() && ih<Config::maxCand;ih++)
 		 {
-		   Track newCand = etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx];//make sure this is a copy
-#ifdef DEBUG
-		   std::cout << "after sorting cand with nhits=" << newCand.nHitIdx() << std::endl;
-#endif
-		   if (hitsToAddForThisSeed[ih].hitIdx>=0) {
-		     TrackState initState = newCand.state();
-		     MeasurementState measState = bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ].measurementState();
-		     float r = sqrt(measState.parameters.At(0)*measState.parameters.At(0) + measState.parameters.At(1)*measState.parameters.At(1));
-#ifdef DEBUG
-		     std::cout << "radius=" << newCand.posR() << " " << r << std::endl;
-#endif
-		     TrackState updatedState = updateParameters(propagateHelixToR(initState, r),measState);
-		     newCand.setState(updatedState);
-		   }
-		   newCand.addHitIdx(hitsToAddForThisSeed[ih].hitIdx,0.);
-		   newCand.setChi2(hitsToAddForThisSeed[ih].chi2);
-		   cands_for_next_lay.push_back(newCand);
+		   seed_newcand_idx.push_back(std::pair<int,MkFitter::IdxChi2List>(is,hitsToAddForThisSeed[ih]));
 		 }
+	     }
+	   int theEndNewCand = seed_newcand_idx.size();     
+	   std::vector<std::vector<Track> > cands_for_next_lay(th_n_seeds);
+	   for (int iseed=0;iseed<cands_for_next_lay.size();++iseed)
+	     {
+	       cands_for_next_lay[iseed].reserve(Config::maxCand);
+	     }
+	   //vectorized loop
+	   for (int itrack = 0; itrack < theEndNewCand; itrack += NN)
+	     {
+
+	       int end = std::min(itrack + NN, theEndNewCand);
+
+	       MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
+	       
+	       mkfp->SetNhits(ilay);//here again assuming one hit per layer
+	       
+	       //fixme find a way to deal only with the candidates needed in this thread
+	       mkfp->InputTracksAndHitIdx(etabin_of_comb_candidates.m_candidates, seed_newcand_idx, itrack, end);
+	       
+	       //propagate to layer
 #ifdef DEBUG
-	       std::cout << "dump seed n " << is << " with output candidates=" << cands_for_next_lay.size() << std::endl;
+	       std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+			 << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-	       if (cands_for_next_lay.size()>0) {
-		 etabin_of_comb_candidates.m_candidates[th_start_seed+is].swap(cands_for_next_lay);
-		 cands_for_next_lay.clear();
-	       }
+	       mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
+
+	       //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
+
+	       mkfp->UpdateWithHit(bunch_of_hits,seed_newcand_idx,cands_for_next_lay,th_start_seed, itrack, end);
+
+	     }
+	   //now swap with input candidates
+	   for (int is=0;is<cands_for_next_lay.size();++is)
+	     {
+	       if (cands_for_next_lay[is].size()>0)
+		 {
+		   etabin_of_comb_candidates.m_candidates[th_start_seed+is].swap(cands_for_next_lay[is]);
+		   cands_for_next_lay[is].clear();
+		 }
+	       else 
+		 {
+		   //we do nothing in the SM version here, I think we should put these in the output and avoid keeping looping over them
+		 }
 	     }
 	   //----------------------- END CLONE ENGINE -----------------------//
 #else //TEST_CLONE_ENGINE

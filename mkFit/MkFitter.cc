@@ -1176,3 +1176,83 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
 #endif
     }
 }
+
+
+
+void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,MkFitter::IdxChi2List> >& idxs, int beg, int end)
+{
+  // Assign track parameters to initial state and copy hit values in.
+
+  // This might not be true for the last chunk!
+  // assert(end - beg == NN);
+
+  int itrack = 0;
+  for (int i = beg; i < end; ++i, ++itrack)
+  {
+
+    Track &trk = tracks[idxs[i].first][idxs[i].second.trkIdx];
+
+    Label(itrack, 0, 0) = trk.label();
+    SeedIdx(itrack, 0, 0) = idxs[i].first;
+    CandIdx(itrack, 0, 0) = idxs[i].second.trkIdx;
+
+    Err[iC].CopyIn(itrack, trk.errors().Array());
+    Par[iC].CopyIn(itrack, trk.parameters().Array());
+
+    Chg(itrack, 0, 0) = trk.charge();
+    Chi2(itrack, 0, 0) = trk.chi2();
+
+    for (int hi = 0; hi < Nhits; ++hi)
+    {
+
+      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi);//dummy value for now
+
+    }
+  }
+}
+
+void  MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits, std::vector<std::pair<int,IdxChi2List> >& idxs, std::vector<std::vector<Track> >& cands_for_next_lay, int offset, int beg, int end)
+{
+
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if ( idxs[i].second.hitIdx<0 ) continue;
+      Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
+      msErr[Nhits].CopyIn(itrack, hit.error().Array());
+      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+    }
+  
+  updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
+  
+  itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      //create a new candidate and fill the cands_for_next_lay vector
+      Track newcand;
+      newcand.resetHits();//probably not needed
+      newcand.setCharge(Chg(itrack, 0, 0));
+      newcand.setChi2(idxs[i].second.chi2);
+      for (int hi = 0; hi < Nhits; ++hi)
+	{
+	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+	}
+      newcand.addHitIdx(idxs[i].second.hitIdx,0.);
+      newcand.setLabel(Label(itrack, 0, 0));
+      //set the track state to the updated parameters
+      if ( idxs[i].second.hitIdx<0 ) {
+	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
+      } else {
+	Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
+      }
+#ifdef DEBUG
+      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
+#endif
+	  
+      cands_for_next_lay[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
+    }
+}

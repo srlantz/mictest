@@ -111,10 +111,9 @@ public:
     int nhits;
     float chi2;
   };
-  typedef std::pair<int,float> idxChi2Pair;
-  bool sortHitsByChi2(idxChi2Pair cand1,idxChi2Pair cand2) {return cand1.second>cand2.second;}
   void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<IdxChi2List>* hitsToAdd, int offset);
-
+  void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,IdxChi2List> >& idxs, int beg, int end);
+  void UpdateWithHit(BunchOfHits &bunch_of_hits, std::vector<std::pair<int,IdxChi2List> >& idxs, std::vector<std::vector<Track> >& cands_for_next_lay, int offset, int beg, int end);
 };
 
 #endif
