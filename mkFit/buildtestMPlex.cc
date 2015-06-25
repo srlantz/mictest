@@ -1716,8 +1716,9 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #ifdef TEST_CLONE_ENGINE
 	   //----------------------- BEGIN CLONE ENGINE -----------------------//
 	   //now we should figure out which maxCand candidates per seed to create
-	   //will have to define a strategy to vectorize this
-	   //then also ship to a separate thread	   
+	   //this is vectorized, along the lines of the loop above - but now we know the hit to add
+	   //will have to try to ship to a separate thread	   
+	   //1) sort the candidates per each seed
 	   for (int is=0;is<th_n_seeds;++is)
 	     {
 	       std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = hitsToAdd[is];
@@ -1736,8 +1737,8 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	       //sort the damn thing
 	       std::sort(hitsToAddForThisSeed.begin(), hitsToAddForThisSeed.end(), sortCandListByHitsChi2);
 	     }
-	   //now create the candidate for the best maxCand, we'll try to do it vectorized with MkFitter
-	   //first we need to unroll the vectors
+	   //2) now create the candidates for the best maxCand, we'll do it vectorized with MkFitter
+	   //2a) first we need to unroll the vectors
 	   std::vector<std::pair<int,MkFitter::IdxChi2List> > seed_newcand_idx;
 	   for (int is=0;is<th_n_seeds;++is)
 	     {
@@ -1753,7 +1754,7 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	     {
 	       cands_for_next_lay[iseed].reserve(Config::maxCand);
 	     }
-	   //vectorized loop
+	   //2b) vectorized loop
 	   for (int itrack = 0; itrack < theEndNewCand; itrack += NN)
 	     {
 
@@ -1763,7 +1764,6 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	       
 	       mkfp->SetNhits(ilay);//here again assuming one hit per layer
 	       
-	       //fixme find a way to deal only with the candidates needed in this thread
 	       mkfp->InputTracksAndHitIdx(etabin_of_comb_candidates.m_candidates, seed_newcand_idx, itrack, end);
 	       
 	       //propagate to layer
@@ -1774,11 +1774,11 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	       mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
 
 	       //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
-
+	       //also fill the temp vector of candidates
 	       mkfp->UpdateWithHit(bunch_of_hits,seed_newcand_idx,cands_for_next_lay,th_start_seed, itrack, end);
 
 	     }
-	   //now swap with input candidates
+	   //3) now swap the temp vector with the input candidates so that they are used as input for the next layer
 	   for (int is=0;is<cands_for_next_lay.size();++is)
 	     {
 	       if (cands_for_next_lay[is].size()>0)
