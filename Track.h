@@ -23,7 +23,10 @@ class Track
 public:
   Track() {}
 
-  Track(const TrackState& state, const HitVec& hits, float chi2) : state_(state), hits_(hits), chi2_(chi2) {}
+  Track(const TrackState& state, const HitVec& hits, float chi2) : state_(state), hits_(hits), chi2_(chi2)
+  {
+    //hitIdxVec_.reserve(12);
+  }
   Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitVec& hits, float chi2) 
     : hits_(hits), chi2_(chi2) 
   {
@@ -31,6 +34,8 @@ public:
     state_.errors=errors;
     state_.parameters = SVector6(position.At(0),position.At(1),position.At(2),momentum.At(0),momentum.At(1),momentum.At(2));
     state_.valid = true;
+
+    //hitIdxVec_.reserve(12);
   }
   Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitVec& hits, float chi2, const HitVec& initHits)
     : hits_(hits), initHits_(initHits), chi2_(chi2) 
@@ -39,6 +44,8 @@ public:
     state_.errors=errors;
     state_.parameters = SVector6(position.At(0),position.At(1),position.At(2),momentum.At(0),momentum.At(1),momentum.At(2));
     state_.valid = true;
+
+    //hitIdxVec_.reserve(12);
   }
   Track(int charge, const SVector6& parameters, const SMatrixSym66& errors, const HitVec& hits, float chi2)
     : hits_(hits), chi2_(chi2) 
@@ -47,12 +54,16 @@ public:
     state_.errors=errors;
     state_.parameters = parameters;
     state_.valid = true;
+
+    //hitIdxVec_.reserve(12);
   }
   Track(TrackState state, float chi2, int label) :
     state_(state),
     chi2_(chi2),
     label_(label)
-  {}
+  {
+    //hitIdxVec_.reserve(12);
+  }
   
   ~Track(){}
 
@@ -84,11 +95,26 @@ public:
   const HitVec& initHitsVector() const {return initHits_;}
 
   void addHit(const Hit& hit,float chi2) {hits_.push_back(hit);chi2_+=chi2;}
-  void addHitIdx(int hitIdx,float chi2) { hitIdxVec_.push_back(hitIdx); if (hitIdx>=0) ++nGoodHitIdx_; chi2_+=chi2; }
+  void addHitIdx(int hitIdx,float chi2)
+  {
+    // hitIdxVec_.push_back(hitIdx);
+    hitIdxArr_[++hitIdxPos_] = hitIdx;
+    if (hitIdx>=0) ++nGoodHitIdx_; chi2_+=chi2;
+  }
 
-  int  getHitIdx(int posHitIdx) const {return hitIdxVec_[posHitIdx];}
+  int  getHitIdx(int posHitIdx) const
+  {
+    return hitIdxArr_[posHitIdx];
+    // return hitIdxVec_[posHitIdx];
+  }
 
-  void resetHits() { hits_.clear(); hitIdxVec_.clear(); nGoodHitIdx_=0; }
+  void resetHits()
+  {
+    hits_.clear();
+    // hitIdxVec_.clear();
+    hitIdxPos_   = -1;
+    nGoodHitIdx_ = 0;
+  }
   int  nHits()   const { return hits_.size(); }
   int  nHitIdx() const { return nGoodHitIdx_; }
 
@@ -110,7 +136,9 @@ private:
   TrackState state_;
   HitVec hits_;
   HitVec initHits_;
-  HitIdxVec hitIdxVec_;
+  // HitIdxVec hitIdxVec_;
+  int   hitIdxArr_[10];
+  int   hitIdxPos_ = -1;
   float chi2_;
   int   nGoodHitIdx_ =  0;
   int   label_       = -1;
