@@ -12,7 +12,7 @@
 #include "ittnotify.h"
 #endif
 
-#define PRINTOUTS_FOR_PLOTS
+// #define PRINTOUTS_FOR_PLOTS
 
 bool sortCandListByHitsChi2(MkFitter::IdxChi2List cand1,MkFitter::IdxChi2List cand2)
 {

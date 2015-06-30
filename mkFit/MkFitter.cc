@@ -1232,7 +1232,8 @@ void  MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits, std::vector<std::pair<
     {
       //create a new candidate and fill the cands_for_next_lay vector
       Track newcand;
-      newcand.resetHits();//probably not needed
+      // Not needed after construction.
+      // newcand.resetHits(); //probably not needed
       newcand.setCharge(Chg(itrack, 0, 0));
       newcand.setChi2(idxs[i].second.chi2);
       for (int hi = 0; hi < Nhits; ++hi)
