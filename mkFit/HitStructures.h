@@ -24,8 +24,8 @@
 namespace Config
 {
   // const int g_NEvents           = 10;
-  const int g_NEvents           = 100;
-  const int g_NTracks           = 20000;
+  const int g_NEvents           = 1;
+  const int g_NTracks           = 2000;
   const int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
 
   const int g_MaxCandsPerSeed   = 6;

@@ -10,6 +10,8 @@
 //#define DEBUG 1
 #define TEST_CLONE_ENGINE
 
+class CandCloner;
+
 class MkFitter
 {
   MPlexLS Err[2];
@@ -116,7 +118,7 @@ public:
     float chi2;//total chi2 (used for sorting)
   };
   //version of find candidates that does not cloning, just fills the IdxChi2List as output (to be then read by the clone engine)
-  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<IdxChi2List>* hitsToAdd, int offset);
+  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner, int offset);
   //version of input tracks using IdxChi2List
   void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,IdxChi2List> >& idxs, int beg, int end);
   //method used by the clone engine to do the actual cloning on the predefined candidate+hit

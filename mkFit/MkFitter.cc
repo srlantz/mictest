@@ -1043,8 +1043,9 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 
 }
 
+#include "CandCloner.h"
 
-void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vector<MkFitter::IdxChi2List>* hitsToAdd, int offset)
+void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner, int offset)
 {
 
   //an array of vectors, i.e. we know the size of NN and for now we add all hits passing the chi2 cut
@@ -1148,7 +1149,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
 	    tmpList.hitIdx = XHitBegin.At(itrack, 0, 0) + hit_cnt;
 	    tmpList.nhits = countValidHits(itrack)+1;
 	    tmpList.chi2 = Chi2(itrack, 0, 0)+chi2;
-	    hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+            cloner.add_cand(SeedIdx(itrack, 0, 0)-offset, tmpList);
+	    // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
 	    std::cout << "adding hit with hit_cnt=" << hit_cnt << " for trkIdx=" << tmpList.trkIdx << std::endl;
 #endif
@@ -1170,7 +1172,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, std::vecto
       tmpList.hitIdx = -1;
       tmpList.nhits = countValidHits(itrack);
       tmpList.chi2 = Chi2(itrack, 0, 0);
-      hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+      cloner.add_cand(SeedIdx(itrack, 0, 0)-offset, tmpList);
+      // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
       std::cout << "adding invalid hit" << std::endl;
 #endif
