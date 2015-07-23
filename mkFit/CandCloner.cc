@@ -185,34 +185,21 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
   //----------------------- END CLONE ENGINE -----------------------//
 }
 
-void CandCloner::DoWorkInSideThread()
+void CandCloner::DoWorkInSideThread(CandClonerWork_t work)
 {
-  while (true)
+  int beg     = work.first;
+  int the_end = work.second;
+
+  // printf("CandCloner::DoWorkInSideThread working on beg=%d to the_end=%d\n", beg, the_end);
+
+  while (beg != the_end)
   {
-    int mt_done = m_mt_done.load();
-    int st_done = m_st_done.load();
+    int end = std::min(beg + s_max_seed_range, the_end);
 
-    printf("CandCloner::DoWorkInSideThread considering m_st_done=%d .vs. m_mt_done=%d\n",
-           st_done, mt_done);
+    // printf("CandCloner::DoWorkInSideThread processing %d -> %d\n", beg, end);
 
-    if (st_done == mt_done)
-    {
-      break;
-    }
+    ProcessSeedRange(beg, end);
 
-    int the_end = mt_done;
-
-    while (st_done != the_end)
-    {
-      int end = std::min(st_done + s_max_seed_range, the_end);
-
-      printf("CandCloner::DoWorkInSideThread processing %d -> %d\n", st_done, end);
-
-      ProcessSeedRange(m_st_done, end);
-
-      st_done = end;
-    }
-
-    m_st_done.store(st_done);
+    beg = end;
   }
 }

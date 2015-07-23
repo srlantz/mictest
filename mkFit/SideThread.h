@@ -8,6 +8,8 @@
     //   m_cnd.notify_one();
     // }
 
+#include <list>
+
 #include <thread>
 #include <condition_variable>
 
@@ -27,7 +29,7 @@ namespace
   }
 }
 
-
+template <typename WWW>
 class SideThread
 {
   // Abstraction of a side processing in a separate thread.
@@ -39,11 +41,15 @@ protected:
   std::mutex               m_moo;
   std::condition_variable  m_cnd;
 
+  std::list<WWW>           m_work_queue;
+
   bool                     m_mt_waiting = false;
 
   bool                     m_st_exit    = false;
 
 public:
+
+  // ~SideThread() --- derived class should call JoinSideThread() in its destructor.
 
   void SpawnSideThread(int cpuid=-1, int cpuid_st=-1)
   {
@@ -61,7 +67,14 @@ public:
     }
   }
 
-  virtual void DoWorkInSideThread() = 0;
+  void QueueWork(WWW work)
+  {
+    std::unique_lock<std::mutex> lk(m_moo);
+    m_work_queue.push_back(work);
+    m_cnd.notify_one();
+  }
+
+  virtual void DoWorkInSideThread(WWW work) = 0;
 
   void WaitForSideThreadToFinish()
   {
@@ -89,32 +102,45 @@ public:
 
     while (true)
     {
+      WWW work;
+
       {
         std::unique_lock<std::mutex> lk(m_moo);
 
-        if (m_mt_waiting)
+        while (m_work_queue.empty())
         {
-          m_cnd.notify_one();
-          continue;
+          if (m_mt_waiting)
+          {
+            m_cnd.notify_one();
+          }
+
+          if (m_st_exit)
+          {
+            // printf("SideThread::RunSideThread terminating thread ...\n");
+            return;
+          }
+
+          m_cnd.wait(lk);
         }
 
-        m_cnd.wait(lk);
-
-        if (m_st_exit) break;
+        work = m_work_queue.front();
+        m_work_queue.pop_front();
       }
 
-      DoWorkInSideThread();
+      DoWorkInSideThread(work);
     }
   }
 
   void JoinSideThread()
   {
-    // printf("MkFitter::JoinSideThread in cpuid %d\n", sched_getcpu());
+    printf("SideThread::JoinSideThread entering ...\n");
+    // printf("SideThread::JoinSideThread in cpuid %d\n", sched_getcpu());
     {
       std::unique_lock<std::mutex> lk(m_moo);
       m_st_exit = true;
       m_cnd.notify_one();
     }
+
     m_thr.join();
   }
 

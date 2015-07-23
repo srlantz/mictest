@@ -1783,6 +1783,8 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	   
 	 }//end of layer loop
 
+       cloner.end_eta_bin();
+
        //final sorting
        int nCandsBeforeEnd = 0;
        for (int iseed=th_start_seed;iseed<th_end_seed;++iseed) 

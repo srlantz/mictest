@@ -7,8 +7,10 @@
 
 #include <vector>
 
+typedef std::pair<int, int> CandClonerWork_t;
 
-class CandCloner : public SideThread
+
+class CandCloner : public SideThread<CandClonerWork_t>
 {
 public:
   // Maximum number of seeds processed in one call to ProcessSeedRange()
@@ -22,9 +24,6 @@ private:
 
   // Size of this one is s_max_seed_range
   std::vector<std::vector<Track> > t_cands_for_next_lay;
-
-  // Variables counting number of seeds processed in master / side thread (per layer).
-  std::atomic_int m_mt_done, m_st_done;
 
 public:
   CandCloner()
@@ -44,18 +43,27 @@ public:
 
   ~CandCloner()
   {
-     _mm_free(m_fitter);
+    // printf("CandCloner::~CandCloner will try to join the side thread now ...\n");
 
-     JoinSideThread();
+    JoinSideThread();
+
+    _mm_free(m_fitter);
   }
 
   void begin_eta_bin(EtaBinOfCombCandidates * eb_o_ccs, int start_seed, int n_seeds)
   {
+    printf("CandCloner::begin_eta_bin\n");
+
     mp_etabin_of_comb_candidates = eb_o_ccs;
     m_start_seed = start_seed;
     m_n_seeds    = n_seeds;
     m_hits_to_add.resize(n_seeds);
-    // XXX Should resize vectors in m_hits_to_add to whatever makes sense.
+
+    // XXX Should resize vectors in m_hits_to_add to whatever makes sense ???
+    // for (int i = 0; i < n_seeds; ++i)
+    // {
+    //   m_hits_to_add[i].reserve(20 * Config::maxCand);
+    // }
   }
 
   void begin_layer(BunchOfHits *b_o_hs, int lay)
@@ -68,9 +76,6 @@ public:
 
     m_idx_max      = 0;
     m_idx_max_prev = 0;
-
-    m_mt_done = 0;
-    m_st_done = 0;
   }
 
   void begin_iteration()
@@ -93,8 +98,6 @@ public:
 
     if (proc_n >= s_max_seed_range)
     {
-      std::unique_lock<std::mutex> lk(m_moo);
- 
       // Round to multiple of s_max_seed_range.
       signal_work_to_st((m_idx_max / s_max_seed_range) * s_max_seed_range);
     }
@@ -102,30 +105,26 @@ public:
 
   void end_layer()
   {
-    std::unique_lock<std::mutex> lk(m_moo);
-
     if (m_idx_max > m_idx_max_prev)
     {
       signal_work_to_st(m_idx_max);
     }
 
     WaitForSideThreadToFinish();
+  }
 
-    // while (m_mt_done > m_st_done)
-    // {
-    //   m_cnd.wait(lk);
-    // }
+  void end_eta_bin()
+  {
+    printf("CandCloner::end_eta_bin\n");
   }
 
   void signal_work_to_st(int idx)
   {
-    // Should be called under a lock.
+    // printf("CandCloner::signal_work_to_st assigning work up to seed %d\n", idx);
 
-    printf("CandCloner::signal_work_to_st assigning work up to seed %d\n", idx);
+    QueueWork(std::make_pair(m_idx_max_prev, idx));
 
-    m_mt_done.store(idx);
     m_idx_max_prev = idx;
-    m_cnd.notify_one();
   }
 
   // ----------------------------------------------------------------
@@ -135,7 +134,7 @@ public:
   void ProcessSeedRange(int is_beg, int is_end);
 
   // virtual
-  void DoWorkInSideThread();
+  void DoWorkInSideThread(CandClonerWork_t work);
 
   // ----------------------------------------------------------------
 
