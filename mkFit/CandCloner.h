@@ -109,7 +109,7 @@ public:
 
   void end_layer()
   {
-    if (m_idx_max > m_idx_max_prev)
+    if (m_idx_max + 1 > m_idx_max_prev)
     {
       signal_work_to_st(m_idx_max + 1);
     }
