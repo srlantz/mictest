@@ -1639,9 +1639,9 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #endif
 
 #ifdef TEST_CLONE_ENGINE
-	   CandCloner cloner;
+       CandCloner cloner;
 
-           cloner.begin_eta_bin(&etabin_of_comb_candidates, th_start_seed, th_n_seeds);
+       cloner.begin_eta_bin(&etabin_of_comb_candidates, th_start_seed, th_n_seeds);
 #endif
 
        //ok now we start looping over layers
@@ -1726,11 +1726,21 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	       mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
 #endif
 	       
-	     }//end of vectorized loop
+	     } //end of vectorized loop
 
 #ifdef TEST_CLONE_ENGINE
 
-           cloner.CutAndPastaFromBuildTestMPlex();
+           cloner.end_layer();
+
+           // cloner.CutAndPastaFromBuildTestMPlex();
+
+           // for (int i = 0; i < cloner.m_n_seeds; i += CandCloner::s_max_seed_range)
+           // {
+           //   int beg = cloner.m_start_seed + i;
+           //   int end = std::min(beg + CandCloner::s_max_seed_range, cloner.m_start_seed + cloner.m_n_seeds);
+
+           //   cloner.ProcessSeedRange(beg, end);
+           // }
 
 #else //TEST_CLONE_ENGINE
 	   //clean exceeding candidates per seed

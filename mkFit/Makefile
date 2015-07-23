@@ -28,7 +28,8 @@ ifeq (${CXX},icc)
 endif
 
 
-all: ${EXES}
+all:: ${AUTO_TGTS}
+all:: ${EXES}
 
 
 auto-matriplex:

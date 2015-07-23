@@ -1182,7 +1182,9 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
 
 
-void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,MkFitter::IdxChi2List> >& idxs, int beg, int end)
+void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
+                                    std::vector<std::pair<int,MkFitter::IdxChi2List> >& idxs,
+                                    int beg, int end)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -1207,16 +1209,16 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-
       HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi);//dummy value for now
-
     }
   }
 }
 
-void  MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits, std::vector<std::pair<int,IdxChi2List> >& idxs, std::vector<std::vector<Track> >& cands_for_next_lay, int offset, int beg, int end)
+void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
+                             std::vector<std::pair<int,IdxChi2List> >& idxs,
+                             std::vector<std::vector<Track> >& cands_for_next_lay,
+                             int offset, int beg, int end)
 {
-
   int itrack = 0;
 #pragma simd
   for (int i = beg; i < end; ++i, ++itrack)
@@ -1257,6 +1259,6 @@ void  MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits, std::vector<std::pair<
       std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
 #endif
 	  
-      cands_for_next_lay[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
+      cands_for_next_lay[SeedIdx(itrack, 0, 0) - offset].push_back(newcand);
     }
 }
