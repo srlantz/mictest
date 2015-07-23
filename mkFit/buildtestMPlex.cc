@@ -1609,6 +1609,10 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
      omp_unset_lock(&writelock);
 #endif
 
+#if defined(TEST_CLONE_ENGINE) and not defined(CLONE_ENGINE_PER_LAYER)
+     CandCloner cloner;
+#endif
+
      //loop over eta bins
      for (int ebin = th_start_ebin; ebin < th_end_ebin; ++ebin)
      {
@@ -1639,8 +1643,9 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #endif
 
 #ifdef TEST_CLONE_ENGINE
+#ifdef CLONE_ENGINE_PER_LAYER
        CandCloner cloner;
-
+#endif
        cloner.begin_eta_bin(&etabin_of_comb_candidates, th_start_seed, th_n_seeds);
 #endif
 
@@ -1730,9 +1735,10 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 
 #ifdef TEST_CLONE_ENGINE
 
+           // cloner.CutAndPastaFromBuildTestMPlex();
+
            cloner.end_layer();
 
-           // cloner.CutAndPastaFromBuildTestMPlex();
 
            // for (int i = 0; i < cloner.m_n_seeds; i += CandCloner::s_max_seed_range)
            // {

@@ -9,6 +9,8 @@
 
 //#define DEBUG 1
 #define TEST_CLONE_ENGINE
+//#define CLONE_ENGINE_PER_LAYER
+//#define CLONE_ENGINE_SINGLE_THREAD
 
 class CandCloner;
 

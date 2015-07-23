@@ -82,6 +82,7 @@ public:
 
     m_mt_waiting = true;
 
+    m_cnd.notify_one();
     m_cnd.wait(lk);
 
     m_mt_waiting = false;

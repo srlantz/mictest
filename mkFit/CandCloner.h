@@ -38,21 +38,25 @@ public:
       t_cands_for_next_lay[iseed].reserve(Config::maxCand);
     }
 
+#ifndef CLONE_ENGINE_SINGLE_THREAD
     SpawnSideThread();
+#endif
   }
 
   ~CandCloner()
   {
     // printf("CandCloner::~CandCloner will try to join the side thread now ...\n");
 
+#ifndef CLONE_ENGINE_SINGLE_THREAD
     JoinSideThread();
+#endif
 
     _mm_free(m_fitter);
   }
 
   void begin_eta_bin(EtaBinOfCombCandidates * eb_o_ccs, int start_seed, int n_seeds)
   {
-    printf("CandCloner::begin_eta_bin\n");
+    // printf("CandCloner::begin_eta_bin\n");
 
     mp_etabin_of_comb_candidates = eb_o_ccs;
     m_start_seed = start_seed;
@@ -107,22 +111,33 @@ public:
   {
     if (m_idx_max > m_idx_max_prev)
     {
-      signal_work_to_st(m_idx_max);
+      signal_work_to_st(m_idx_max + 1);
     }
 
+#ifndef CLONE_ENGINE_SINGLE_THREAD
     WaitForSideThreadToFinish();
+#endif
+
+    for (int i = 0; i < m_n_seeds; ++i)
+    {
+      m_hits_to_add[i].clear();
+    }
   }
 
   void end_eta_bin()
   {
-    printf("CandCloner::end_eta_bin\n");
+    // printf("CandCloner::end_eta_bin\n");
   }
 
   void signal_work_to_st(int idx)
   {
     // printf("CandCloner::signal_work_to_st assigning work up to seed %d\n", idx);
 
+#ifndef CLONE_ENGINE_SINGLE_THREAD
     QueueWork(std::make_pair(m_idx_max_prev, idx));
+#else
+    DoWorkInSideThread(std::make_pair(m_idx_max_prev, idx));
+#endif
 
     m_idx_max_prev = idx;
   }

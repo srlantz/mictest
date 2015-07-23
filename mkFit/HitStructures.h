@@ -23,12 +23,11 @@
 
 namespace Config
 {
-  // const int g_NEvents           = 10;
-  const int g_NEvents           = 1;
-  const int g_NTracks           = 2000;
+  const int g_NEvents           = 10;
+  const int g_NTracks           = 20000;
   const int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
 
-  const int g_MaxCandsPerSeed   = 8;
+  const int g_MaxCandsPerSeed   = 6;
   const int g_MaxCandsPerEtaBin = std::max(100, g_MaxCandsPerSeed * g_NTracks / Config::nEtaPart);
   // Effective eta bin is one half of nEtaPart -- so the above is twice the "average".
   // Note that last and first bin are 3/4 nEtaPart ... but can be made 1/4 by adding
