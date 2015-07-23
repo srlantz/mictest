@@ -1789,7 +1789,9 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 	   
 	 }//end of layer loop
 
+#ifdef TEST_CLONE_ENGINE
        cloner.end_eta_bin();
+#endif
 
        //final sorting
        int nCandsBeforeEnd = 0;

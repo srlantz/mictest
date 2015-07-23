@@ -20,6 +20,10 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
   {
     std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = m_hits_to_add[is];
 #ifdef DEBUG
+    EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+    int th_start_seed = m_start_seed;
+    MkFitter *mkfp = m_fitter;
+
     std::cout << "dump seed n " << is << " with input candidates=" << hitsToAddForThisSeed.size() << std::endl;
     for (int ih=0;ih<hitsToAddForThisSeed.size();ih++)
     {
@@ -63,6 +67,10 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
 	       
     //propagate to layer
 #ifdef DEBUG
+    EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+    MkFitter *mkfp = m_fitter;
+    int ilay = m_layer;
+
     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
               << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
@@ -111,6 +119,9 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
   {
     std::vector<MkFitter::IdxChi2List>& hitsToAddForThisSeed = m_hits_to_add[is];
 #ifdef DEBUG
+    EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+    int th_start_seed = m_start_seed;
+
     std::cout << "dump seed n " << is << " with input candidates=" << hitsToAddForThisSeed.size() << std::endl;
     for (int ih = 0; ih<hitsToAddForThisSeed.size(); ih++)
     {
@@ -153,6 +164,9 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
 	       
     //propagate to layer
 #ifdef DEBUG
+    MkFitter *mkfp = m_fitter;
+    int ilay = m_layer;
+
     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
               << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
