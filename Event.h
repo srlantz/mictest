@@ -1,6 +1,9 @@
 #ifndef _event_
 #define _event_
 
+#define TEST_CLONE_ENGINE
+//#define CLONE_ENGINE_SINGLE_THREAD
+
 #include "Track.h"
 #include "Validation.h"
 #include "Geometry.h"

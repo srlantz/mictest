@@ -4,6 +4,10 @@
 #include "Event.h"
 #include "Track.h"
 
+#ifdef TEST_CLONE_ENGINE
+#include "CandCloner.h"
+#endif
+
 /*
 void   generateTracks(std::vector<Track>& simtracks, int Ntracks);
 void   make_validation_tree(const char         *fname,
@@ -22,7 +26,11 @@ void processCandidates(std::pair<Track, TrackState>& cand,std::vector<std::pair<
 		       unsigned int ilay,std::vector<std::vector<Hit> >& evt_lay_hits,std::vector<std::vector<BinInfo> >& evt_lay_phi_hit_idx,
 		       const int& nhits_per_seed,const unsigned int& maxCand,const float& chi2Cut,const float& nSigma,const float& minDPhi);
 
+#ifdef TEST_CLONE_ENGINE
+double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/, CandCloner& cloner);
+#else
 double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
+#endif
 double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
 double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
 

@@ -258,6 +258,10 @@ void test_standard()
 
   double s_tmp=0, s_tsm=0, s_tsm2=0, s_tmp2=0, s_tsm2bh=0, s_tmp2bh=0;
 
+#ifdef TEST_CLONE_ENGINE
+  CandCloner cloner;
+#endif
+
   for (int ev = 0; ev < Nevents; ++ev)
   {
     if (g_operation == "read")
@@ -278,8 +282,11 @@ void test_standard()
     tmp = 0; // runFittingTestPlex(simtracks, plex_tracks);
 
     double tsm2 = 0;//runBuildingTest(simtracks);
+#ifdef TEST_CLONE_ENGINE
+    double tmp2 = runBuildingTestPlex(simtracks, cloner);
+#else
     double tmp2 = runBuildingTestPlex(simtracks);
-
+#endif
     double tsm2bh = 0;//runBuildingTestBestHit(simtracks);
     double tmp2bh = 0;//runBuildingTestPlexBestHit(simtracks);
 

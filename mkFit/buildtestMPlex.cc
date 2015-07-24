@@ -1408,9 +1408,11 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 // runBuildTestPlex
 //==============================================================================
 
-#include "CandCloner.h"
-
+#ifdef TEST_CLONE_ENGINE
+double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/, CandCloner& cloner)
+#else
 double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/)
+#endif
 {
   printf("Hello, runBuildingTestPlex sizeof(Track)=%d, sizeof(Hit)=%d, vusize=%i, num_th=%i\n\n", sizeof(Track), sizeof(Hit), MPT_SIZE, NUM_THREADS);
 
@@ -1612,10 +1614,6 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
      omp_unset_lock(&writelock);
 #endif
 
-#if defined(TEST_CLONE_ENGINE) and not defined(CLONE_ENGINE_PER_LAYER)
-     CandCloner cloner;
-#endif
-
      //loop over eta bins
      for (int ebin = th_start_ebin; ebin < th_end_ebin; ++ebin)
      {
@@ -1646,9 +1644,6 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
 #endif
 
 #ifdef TEST_CLONE_ENGINE
-#ifdef CLONE_ENGINE_PER_LAYER
-       CandCloner cloner;
-#endif
        cloner.begin_eta_bin(&etabin_of_comb_candidates, th_start_seed, th_n_seeds);
 #endif
 
