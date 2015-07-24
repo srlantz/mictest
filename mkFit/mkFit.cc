@@ -253,7 +253,8 @@ void test_standard()
 
   if (g_operation == "read")
   {
-    Nevents = open_simtrack_file();
+    //Nevents = open_simtrack_file();
+    open_simtrack_file();
   }
 
   double s_tmp=0, s_tsm=0, s_tsm2=0, s_tmp2=0, s_tsm2bh=0, s_tmp2bh=0;

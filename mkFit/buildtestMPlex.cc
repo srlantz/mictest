@@ -1436,6 +1436,9 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
     for (int ilay = 0; ilay < simtracks[itrack].nHits(); ++ilay)
     {
       event_of_hits.InsertHit(simtracks[itrack].hitsVector()[ilay], ilay);
+#ifdef DEBUG
+      std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector()[ilay].position() << " phi=" << simtracks[itrack].hitsVector()[ilay].phi() << " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector()[ilay].phi()) << std::endl;
+#endif
     }
   }
 
