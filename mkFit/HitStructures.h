@@ -23,8 +23,8 @@
 
 namespace Config
 {
-  // const int g_NEvents           = 10;
-  const int g_NEvents           = 100;
+  const int g_NEvents           = 10;
+  // const int g_NEvents           = 100;
   const int g_NTracks           = 20000;
   const int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
 
@@ -119,6 +119,23 @@ public:
       last_bin = bin;
       ++idx;
     }
+
+    //now fix empty bins
+    int nextHitToFind = 0;
+    for (int b = 0; b < Config::nPhiPart; ++b)
+    {
+      if (m_phi_bin_infos[b].first == 0 && m_phi_bin_infos[b].second == 0) 
+      {
+	m_phi_bin_infos[b].first = nextHitToFind;
+      } 
+      else 
+      {
+	nextHitToFind = m_phi_bin_infos[b].first + m_phi_bin_infos[b].second;
+      }
+      //std::cout << "bin=" << b << " set to " << m_phi_bin_infos[b].first << "," << m_phi_bin_infos[b].second << std::endl;
+    }
+
+
   }
 };
 
