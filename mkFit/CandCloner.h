@@ -26,7 +26,7 @@ private:
   std::vector<std::vector<Track> > t_cands_for_next_lay;
 
 public:
-  CandCloner()
+  CandCloner(int cpuid=-1, int cpuid_st=-1)
   {
     m_fitter = new (_mm_malloc(sizeof(MkFitter), 64)) MkFitter(0);
 
@@ -39,7 +39,7 @@ public:
     }
 
 #ifndef CLONE_ENGINE_SINGLE_THREAD
-    SpawnSideThread();
+    SpawnSideThread(cpuid, cpuid_st);
 #endif
   }
 
