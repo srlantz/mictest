@@ -31,7 +31,12 @@ public:
   const Geometry& geom_;
   Validation& validation_;
   std::vector<HitVec> layerHits_;
-  TrackVec simTracks_, seedTracks_, candidateTracks_;
+  //simTracks_, simHits_, simHitIdxs_ and initialHits_ work on sync, same index
+  TrackVec simTracks_;
+  std::vector<HitVec> simHits_;
+  std::vector<std::vector<int> > simHitIdxs_;
+  std::vector<HitVec> initialHits_;
+  TrackVec seedTracks_, candidateTracks_;
   int threads_;
 
   BinInfoMap segmentMap_;

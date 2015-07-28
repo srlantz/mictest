@@ -57,12 +57,12 @@ void fitTrack(const Track& trk, const Event& ev)
 
 #define INWARD
 #if defined(INWARD)
-  auto hits(trk.hitsVector());
+  auto hits(trk.hitsVector(ev.layerHits_));
   std::reverse(hits.begin(), hits.end());
 #else
-  const auto& hits = trk.hitsVector();
+  const auto& hits = trk.hitsVector(ev.layerHits_);
 #endif
-  unsigned int itrack0 = trk.SimTrackIDInfo().first;
+  unsigned int itrack0 = trk.SimTrackIDInfo(ev.layerHits_).first;
   Track trk0 = ev.simTracks_[itrack0];
   TrackState simState = trk0.state();
 
@@ -134,7 +134,7 @@ void fitTrack(const Track& trk, const Event& ev)
 #endif
     }
 
-    const HitVec& mcInitHitVec = ev.simTracks_[hit.mcTrackID()].initHitsVector();
+    const HitVec& mcInitHitVec = ev.initialHits_[hit.mcTrackID()];
     const auto hitid = hit.hitID();
     ev.validation_.fillFitHitHists(hitid, mcInitHitVec, measState, propState, updatedState);
   } // end loop over hits

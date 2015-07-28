@@ -44,8 +44,8 @@ inline float normalizedEta(float eta) {
 
 static bool sortByHitsChi2(const cand_t& cand1, const cand_t& cand2)
 {
-  if (cand1.nHits()==cand2.nHits()) return cand1.chi2()<cand2.chi2();
-  return cand1.nHits()>cand2.nHits();
+  if (cand1.nFoundHits()==cand2.nFoundHits()) return cand1.chi2()<cand2.chi2();
+  return cand1.nFoundHits()>cand2.nFoundHits();
 }
 
 void processCandidates(Event& ev, const Track& seed, candvec& candidates, unsigned int ilay, const bool debug)
@@ -331,8 +331,8 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
       if ((chi2<Config::chi2Cut)&&(chi2>0.)) {//fixme 
         dprint("found hit with index: " << *index_iter << " chi2=" << chi2);
         const TrackState tmpUpdatedState = updateParameters(propState, hitMeas);
-        Track tmpCand(tmpUpdatedState,tkcand.hitsVector(),tkcand.chi2()); //= tkcand.clone();
-        tmpCand.addHit(hitCand,chi2);
+        Track tmpCand = tkcand.clone();//(tmpUpdatedState,tkcand.hitsVector(),tkcand.chi2()); //= tkcand.clone();
+        tmpCand.addHitIdx(*index_iter,chi2);
         tmp_candidates.push_back(tmpCand);
       }
     }//end of consider hits on layer loop
@@ -340,7 +340,7 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
   }//end of eta loop
 
   //add also the candidate for no hit found
-  if (tkcand.nHits()==ilayer) {//only if this is the first missing hit
+  if (tkcand.nFoundHits()==ilayer) {//only if this is the first missing hit
     dprint("adding candidate with no hit");
     tmp_candidates.push_back(tkcand);
   }
