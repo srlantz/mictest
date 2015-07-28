@@ -24,7 +24,7 @@ void MkFitter::PrintPt(int idx)
 
 //==============================================================================
 
-void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec> layerHits, int beg, int end)
+void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec>& layerHits, int beg, int end)
 {
   // Assign track parameters to initial state and copy hit values in.
 

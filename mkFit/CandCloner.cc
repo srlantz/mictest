@@ -29,8 +29,8 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
     {
       std::cout << "trkIdx=" << hitsToAddForThisSeed[ih].trkIdx << " hitIdx=" << hitsToAddForThisSeed[ih].hitIdx << " chi2=" <<  hitsToAddForThisSeed[ih].chi2 << std::endl;
       std::cout << "original pt=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].pT() << " " 
-                << "nHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHits() << " " 
-                << "nHitIdx=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHitIdx() << " " 
+                << "nTotalHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nTotalHits() << " " 
+                << "nFoundHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nFoundHits() << " " 
                 << "chi2=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].chi2() << " " 
                 << std::endl;
     }
@@ -127,8 +127,8 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
     {
       std::cout << "trkIdx=" << hitsToAddForThisSeed[ih].trkIdx << " hitIdx=" << hitsToAddForThisSeed[ih].hitIdx << " chi2=" <<  hitsToAddForThisSeed[ih].chi2 << std::endl;
       std::cout << "original pt=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].pT() << " " 
-                << "nHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHits() << " " 
-                << "nHitIdx=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nHitIdx() << " " 
+                << "nTotalHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nTotalHits() << " " 
+                << "nFoundHits=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].nFoundHits() << " " 
                 << "chi2=" << etabin_of_comb_candidates.m_candidates[th_start_seed+is][hitsToAddForThisSeed[ih].trkIdx].chi2() << " " 
                 << std::endl;
     }

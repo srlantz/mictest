@@ -71,6 +71,7 @@ void Event::Simulate(unsigned int nTracks)
       TrackState tk_state(pars,covtrk,q);
       Track sim_track;
       sim_track.setState(tk_state);
+      sim_track.setLabel(itrack);
       simTracks_[itrack] = sim_track;
       simHits_[itrack] = hits;
       initialHits_[itrack] = initialhits;
@@ -83,6 +84,7 @@ void Event::Simulate(unsigned int nTracks)
   for (int itrack = 0; itrack < nTracks; ++itrack) {
     for (const auto& hit : simHits_[itrack]) {
       simHitIdxs_[itrack].push_back(layerHits_[hit.layer()].size());
+      simTracks_[itrack].addHitIdx(layerHits_[hit.layer()].size(),0.);
       layerHits_[hit.layer()].push_back(hit);
     }
   }
