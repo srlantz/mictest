@@ -4,15 +4,8 @@
 #include "Event.h"
 #include "Track.h"
 
-/*
-void   generateTracks(std::vector<Track>& simtracks, int Ntracks);
-void   make_validation_tree(const char         *fname,
-                            std::vector<Track> &simtracks,
-                            std::vector<Track> &rectracks);
-*/
-
-double runBuildingTest(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
-double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
+double runBuildingTest(Event& ev);
+double runBuildingTestBestHit(Event& ev);
 
 void buildTestParallel(std::vector<Track>& evt_seeds,std::vector<Track>& evt_track_candidates,
 		       std::vector<std::vector<Hit> >& evt_lay_hits,std::vector<std::vector<BinInfo> >& evt_lay_phi_hit_idx,
@@ -22,8 +15,8 @@ void processCandidates(std::pair<Track, TrackState>& cand,std::vector<std::pair<
 		       unsigned int ilay,std::vector<std::vector<Hit> >& evt_lay_hits,std::vector<std::vector<BinInfo> >& evt_lay_phi_hit_idx,
 		       const int& nhits_per_seed,const unsigned int& maxCand,const float& chi2Cut,const float& nSigma,const float& minDPhi);
 
-double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
-double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
-double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/);
+double runBuildingTestPlex(Event& ev);
+double runBuildingTestPlexOld(Event& ev);
+double runBuildingTestPlexBestHit(Event& ev);
 
 #endif

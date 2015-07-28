@@ -61,7 +61,7 @@ public:
   int getXHitBegin(int arg0,int arg1,int arg2) { return XHitBegin.At(arg0, arg1, arg2); }
   int getXHitEnd  (int arg0,int arg1,int arg2) { return XHitEnd  .At(arg0, arg1, arg2); }
 
-  void InputTracksAndHits(std::vector<Track>& tracks, int beg, int end);
+  void InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec> layerHits, int beg, int end);
   void InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);
   void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end);
   void InputTracksOnly   (std::vector<Track>& tracks, int beg, int end);
@@ -76,7 +76,6 @@ public:
     return OutputTracks(tracks,beg,end,iP);
   }
 
-  void OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, int end);
   void OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);
 
   void PropagateTracksToR(float R);
