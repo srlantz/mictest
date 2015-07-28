@@ -1473,6 +1473,12 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
   int theEnd = simtracks.size();
 
   double time = dtime();
+#ifdef BEST_OF_TEN
+double best_time = 999999;
+for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
+{
+  time = dtime();
+#endif
 
   std::vector<Track> recseeds;
   recseeds.resize(simtracks.size());
@@ -1854,8 +1860,14 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
        }
      }
      std::cout << "found tracks=" << cnt   << "  in pT 10%=" << cnt1   << "  in pT 20%=" << cnt2   << "     no_mc_assoc="<< cnt_nomc <<std::endl;
-     std::cout << "  nH >= 8   =" << cnt_8 << "  in pT 10%=" << cnt1_8 << "  in pT 20%=" << cnt2_8 << std::endl;
-   }
+     std::cout << "  nH >= 8   =" << cnt_8 << "  in pT 10%=" << cnt1_8 << "  in pT 20%=" << cnt2_8 << std::endl; 
+  }
+#ifdef BEST_OF_TEN
+   std::cout   << "time=" << time << ", best so far=" << best_time << "\n";
+   best_time = std::min(best_time, time);
+}
+time = best_time;
+#endif
    
    for (int i = 0; i < NUM_THREADS; ++i)
    {
