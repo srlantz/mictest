@@ -159,9 +159,9 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
     int end = std::min(itrack + NN, theEndNewCand);
 
     ////m_fitter->SetNhits(ilay);//here again assuming one hit per layer
-	       
+
     m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, t_seed_newcand_idx, itrack, end);
-	       
+
     //propagate to layer
 #ifdef DEBUG
     MkFitter *mkfp = m_fitter;
@@ -210,7 +210,7 @@ void CandCloner::DoWorkInSideThread(CandClonerWork_t work)
   {
     int end = std::min(beg + s_max_seed_range, the_end);
 
-    // printf("CandCloner::DoWorkInSideThread processing %d -> %d\n", beg, end);
+    // printf("CandCloner::DoWorkInSideThread processing %4d -> %4d\n", beg, end);
 
     ProcessSeedRange(beg, end);
 

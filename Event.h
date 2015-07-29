@@ -3,6 +3,7 @@
 
 #define TEST_CLONE_ENGINE
 //#define CLONE_ENGINE_SINGLE_THREAD
+//#define BEST_OF_TEN
 
 #include "Track.h"
 #include "Validation.h"

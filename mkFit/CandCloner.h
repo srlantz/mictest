@@ -7,6 +7,9 @@
 
 #include <vector>
 
+// #define CC_TIME_LAY
+// #define CC_TIME_ETA
+
 typedef std::pair<int, int> CandClonerWork_t;
 
 
@@ -56,8 +59,6 @@ public:
 
   void begin_eta_bin(EtaBinOfCombCandidates * eb_o_ccs, int start_seed, int n_seeds)
   {
-    // printf("CandCloner::begin_eta_bin\n");
-
     mp_etabin_of_comb_candidates = eb_o_ccs;
     m_start_seed = start_seed;
     m_n_seeds    = n_seeds;
@@ -68,6 +69,11 @@ public:
     // {
     //   m_hits_to_add[i].reserve(20 * Config::maxCand);
     // }
+
+#ifdef CC_TIME_ETA
+    printf("CandCloner::begin_eta_bin\n");
+    t_eta = dtime();
+#endif
   }
 
   void begin_layer(BunchOfHits *b_o_hs, int lay)
@@ -80,6 +86,10 @@ public:
 
     m_idx_max      = 0;
     m_idx_max_prev = 0;
+
+#ifdef CC_TIME_LAY
+    t_lay = dtime();
+#endif
   }
 
   void begin_iteration()
@@ -122,11 +132,19 @@ public:
     {
       m_hits_to_add[i].clear();
     }
+
+#ifdef CC_TIME_LAY
+    t_lay = dtime() - t_lay;
+    printf("CandCloner::end_layer t_lay=%8.6f\n", t_lay);
+#endif
   }
 
   void end_eta_bin()
   {
-    // printf("CandCloner::end_eta_bin\n");
+#ifdef CC_TIME_ETA
+    t_eta = dtime() - t_eta;
+    printf("CandCloner::end_eta_bin t_eta=%8.6f\n", t_eta);
+#endif
   }
 
   void signal_work_to_st(int idx)
@@ -161,10 +179,14 @@ public:
   BunchOfHits            *mp_bunch_of_hits;
   EtaBinOfCombCandidates *mp_etabin_of_comb_candidates;
 
+  MkFitter               *m_fitter;
+
+#if defined(CC_TIME_ETA) or defined(CC_TIME_LAY)
+  double    t_eta, t_lay;
+#endif
+
   int       m_start_seed, m_n_seeds;
   int       m_layer;
-
-  MkFitter *m_fitter;
 };
 
 #endif

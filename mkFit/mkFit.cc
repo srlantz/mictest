@@ -245,6 +245,9 @@ void test_standard()
   // return;
   // ---- end MT test
 
+  printf("sizeof(Hit)=%d, sizeof(SVector3)=%d, sizeof(SMatrixSym33)=%d, sizeof(MCHitInfo)=%d\n",
+         sizeof(Hit), sizeof(SVector3), sizeof(SMatrixSym33), sizeof(MCHitInfo));
+
   int Ntracks = Config::g_NTracks;
   // Ntracks  = 1;
   // bool saveTree = false;
@@ -259,7 +262,14 @@ void test_standard()
   double s_tmp=0, s_tsm=0, s_tsm2=0, s_tmp2=0, s_tsm2bh=0, s_tmp2bh=0;
 
 #ifdef TEST_CLONE_ENGINE
-  CandCloner cloner;
+#if defined(__MIC__)
+  // CandCloner cloner(1, 2);  // Same core
+  CandCloner cloner(1, 5);  // Another cpu
+#else
+  // CandCloner cloner(8, 20); // Same core
+  CandCloner cloner(1, 2);  // Same socket, another core
+  // CandCloner cloner(1, 7);  // Another socket
+#endif
 #endif
 
   for (int ev = 0; ev < Nevents; ++ev)
