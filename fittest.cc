@@ -135,7 +135,7 @@ void fitTrack(const Track& trk, const Event& ev)
     }
 
     const HitVec& mcInitHitVec = ev.initialHits_[hit.mcTrackID()];
-    const auto hitid = hit.hitID();
+    const auto hitid = hit.mcHitTrkID();
     ev.validation_.fillFitHitHists(hitid, mcInitHitVec, measState, propState, updatedState);
   } // end loop over hits
   dcall(print("Fit Track", updatedState));

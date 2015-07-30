@@ -35,7 +35,8 @@ public:
   TrackVec simTracks_;
   std::vector<HitVec> simHits_;
   std::vector<std::vector<int> > simHitIdxs_;
-  std::vector<HitVec> initialHits_;
+  std::vector<HitVec>       initialHits_;
+  std::vector<MCHitInfoVec> initialMCHitsInfo_;
   TrackVec seedTracks_, candidateTracks_;
   int threads_;
 

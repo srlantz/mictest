@@ -150,26 +150,11 @@ public:
 
   Hit(const MeasurementState& state) : state_(state) {}
 
-  Hit(const SVector3& position, const SMatrixSym33& error)
+  Hit(const SVector3& position, const SMatrixSym33& error, int mcHitTrkID)
   {
     state_.parameters=position;
     state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, int itrack, int ilayer, int ithLayerHit)
-  {
-    mcHitInfo_.mcTrackID_ = itrack;
-    mcHitInfo_.layer_ = ilayer;
-    mcHitInfo_.ithLayerHit_ = ithLayerHit;
-    state_.parameters=position;
-    state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, const MCHitInfo& mcHitInfo)
-    : mcHitInfo_(mcHitInfo)
-  {
-    state_.parameters=position;
-    state_.errors=error;
+    mcHitTrkID_ = mcHitTrkID;
   }
 
   ~Hit(){}
@@ -202,21 +187,23 @@ public:
     return getEta(state_.parameters.At(0), state_.parameters.At(1), state_.parameters.At(2));
   }
 
+  int mcHitTrkID() const { return mcHitTrkID_; }
+  int mcTrackID() const { return mcHitTrkID_ / 10; }
+  int mcHitID() const { return mcHitTrkID_ % 10; }
+
   const MeasurementState& measurementState() const {
     return state_;
   }
 
-  const MCHitInfo& mcHitInfo() const {return mcHitInfo_;}
-  int mcTrackID() const {return mcHitInfo_.mcTrackID_;}
-  int layer() const {return mcHitInfo_.layer_;}
-  int ithLayerHit() const {return mcHitInfo_.ithLayerHit_;}
-  int hitID() const {return mcHitInfo_.mcHitID_;}
-
 private:
   MeasurementState state_;
-  MCHitInfo        mcHitInfo_;
+  // unique hit index per event, defined as (10*simtrack_idex + 1*hit_idx). 
+  // the factor 10* is ok since we have 10 hits per track, it can become 100* if we allow for more. 
+  // we will need a different indexing when we'll consider htis from real detector
+  int mcHitTrkID_;
 };
 
 typedef std::vector<Hit> HitVec;
+typedef std::vector<MCHitInfo> MCHitInfoVec;
 
 #endif

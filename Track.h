@@ -62,6 +62,7 @@ public:
   float pT()     const { return getHypot(state_.parameters[3],state_.parameters[4]); }
 
   //this function is very inefficient, use only for debug and validation!
+  //currenlty used in fittest...
   const HitVec hitsVector(const std::vector<HitVec>& globalHitVec) const 
   {
     HitVec hitsVec;

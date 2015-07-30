@@ -85,9 +85,9 @@ void make_validation_tree(const char         *fname,
    const int NT = simtracks.size();
    for (int i = 0; i < NT; ++i)
    {
-      SVector6     &simp   = simtracks[i].parameters();
-      SVector6     &recp   = rectracks[i].parameters();
-      SMatrixSym66 &recerr = rectracks[i].errors();
+      const SVector6     &simp   = simtracks[i].parameters();
+      const SVector6     &recp   = rectracks[i].parameters();
+      const SMatrixSym66 &recerr = rectracks[i].errors();
 
       pt_mc  = sqrt(simp[3]*simp[3] + simp[4]*simp[4]);
       pt_fit = sqrt(recp[3]*recp[3] + recp[4]*recp[4]);

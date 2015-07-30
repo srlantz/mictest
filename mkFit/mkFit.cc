@@ -147,7 +147,7 @@ void test_standard()
 
   double s_tmp=0, s_tsm=0, s_tsm2=0, s_tmp2=0, s_tsm2bh=0, s_tmp2bh=0;
 
-  for (int ev = 0; ev < Nevents; ++ev)
+  for (int iev = 0; iev < Nevents; ++iev)
   {
 
     Event ev(geom, val);
@@ -220,6 +220,12 @@ void test_standard()
     s_tmp    += tmp;    s_tsm    += tsm;
     s_tsm2   += tsm2;   s_tmp2   += tmp2;
     s_tsm2bh += tsm2bh; s_tmp2bh += tmp2bh;
+
+#ifndef NO_ROOT
+    make_validation_tree("validation-smat.root", ev.simTracks_, smat_tracks);
+    make_validation_tree("validation-plex.root", ev.simTracks_, plex_tracks);
+#endif
+
   }
   printf("================================================================\n");
   printf("=== TOTAL for %d events\n", Nevents);
@@ -233,10 +239,6 @@ void test_standard()
     //fixme close_simtrack_file();
   }
 
-#ifndef NO_ROOT
-  make_validation_tree("validation-smat.root", ev.simTracks_, smat_tracks);
-  make_validation_tree("validation-plex.root", ev.simTracks_, plex_tracks);
-#endif
 }
 
 //==============================================================================
