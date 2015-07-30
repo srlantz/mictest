@@ -317,47 +317,47 @@ void RootValidation::fillFitHitHists(unsigned int hitid, const HitVec& mcInitHit
       }
     }
 
-    x_init   = initMeasState.parameters[0];
-    x_mc     = measState.parameters[0];
-    x_mcerr  = measState.errors[0][0]; // sigma^2 of x_mc (same with y,z)
+    x_init   = initMeasState.parameters()[0];
+    x_mc     = measState.parameters()[0];
+    x_mcerr  = measState.errors()[0][0]; // sigma^2 of x_mc (same with y,z)
     x_prop   = propState.parameters[0];
     x_perr   = propState.errors[0][0]; // sigma^2 of x_prop
     x_update = updatedState.parameters[0];
     x_uerr   = updatedState.errors[0][0]; // sigma^2 of x_update
 
-    y_init   = initMeasState.parameters[1];
-    y_mc     = measState.parameters[1];
-    y_mcerr  = measState.errors[1][1];
+    y_init   = initMeasState.parameters()[1];
+    y_mc     = measState.parameters()[1];
+    y_mcerr  = measState.errors()[1][1];
     y_prop   = propState.parameters[1];
     y_perr   = propState.errors[1][1];
     y_update = updatedState.parameters[1];
     y_uerr   = updatedState.errors[1][1];
 
-    z_init   = initMeasState.parameters[2];
-    z_mc     = measState.parameters[2];
-    z_mcerr  = measState.errors[2][2];
+    z_init   = initMeasState.parameters()[2];
+    z_mc     = measState.parameters()[2];
+    z_mcerr  = measState.errors()[2][2];
     z_prop   = propState.parameters[2];
     z_perr   = propState.errors[2][2];
     z_update = updatedState.parameters[2];
     z_uerr   = updatedState.errors[2][2];
 
-    xy_mcerr = measState.errors[0][1];
+    xy_mcerr = measState.errors()[0][1];
 
-    r_init   = sqrt( initMeasState.parameters[0]*initMeasState.parameters[0] +
-                     initMeasState.parameters[1]*initMeasState.parameters[1] );
-    r_mc     = sqrt( measState.parameters[0]*measState.parameters[0] + 
-                     measState.parameters[1]*measState.parameters[1] ); 
+    r_init   = sqrt( initMeasState.parameters()[0]*initMeasState.parameters()[0] +
+                     initMeasState.parameters()[1]*initMeasState.parameters()[1] );
+    r_mc     = sqrt( measState.parameters()[0]*measState.parameters()[0] + 
+                     measState.parameters()[1]*measState.parameters()[1] ); 
     r_prop   = sqrt( propState.parameters[0]*propState.parameters[0] + 
                      propState.parameters[1]*propState.parameters[1] );
     r_update = sqrt( updatedState.parameters[0]*updatedState.parameters[0] + 
                      updatedState.parameters[1]*updatedState.parameters[1] );
 
-    phi_init   = atan2(initMeasState.parameters[1],initMeasState.parameters[0]);
-    phi_mc     = atan2(measState.parameters[1],measState.parameters[0]);
-    phi_mcerr  = ( measState.errors[0][0]*measState.parameters[0]*measState.parameters[0] +
-                   measState.errors[1][1]*measState.parameters[1]*measState.parameters[1] - 
-                   measState.errors[0][1]*measState.parameters[0]*measState.parameters[1] - 
-                   measState.errors[1][0]*measState.parameters[1]*measState.parameters[0] ) / (r_mc*r_mc); // sigma^2 of phi
+    phi_init   = atan2(initMeasState.parameters()[1],initMeasState.parameters()[0]);
+    phi_mc     = atan2(measState.parameters()[1],measState.parameters()[0]);
+    phi_mcerr  = ( measState.errors()[0][0]*measState.parameters()[0]*measState.parameters()[0] +
+                   measState.errors()[1][1]*measState.parameters()[1]*measState.parameters()[1] - 
+                   measState.errors()[0][1]*measState.parameters()[0]*measState.parameters()[1] - 
+                   measState.errors()[1][0]*measState.parameters()[1]*measState.parameters()[0] ) / (r_mc*r_mc); // sigma^2 of phi
     phi_prop   = atan2(propState.parameters[1],propState.parameters[0]);
     phi_perr   = ( propState.errors[0][0]*propState.parameters[0]*propState.parameters[0] +
                    propState.errors[1][1]*propState.parameters[1]*propState.parameters[1] - 

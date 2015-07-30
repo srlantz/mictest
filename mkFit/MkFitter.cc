@@ -1021,8 +1021,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));

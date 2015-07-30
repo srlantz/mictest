@@ -176,6 +176,9 @@ public:
   const SVector3     parameters() const {return state_.parameters();}
   const SMatrixSym33 error()      const {return state_.errors();}
 
+  const float* posArray() const {return state_.pos;}
+  const float* errArray() const {return state_.err;}
+
   // Non-const versions needed for CopyOut of Matriplex.
   SVector3     parameters_nc() {return state_.parameters();}
   SMatrixSym33 error_nc()      {return state_.errors();}
