@@ -181,10 +181,10 @@ double runFittingTest(Event& ev, std::vector<Track>& rectracks)
             // dumpMatrix(propStateLine.errors);
             // TrackState propState = propStateLine;
 
-            std::cout << "measState.parameters" << std::endl;
-            std::cout << "x: " << measState.parameters[0] << " " << measState.parameters[1] << " " << measState.parameters[2] << std::endl;
+            std::cout << "measState.pos" << std::endl;
+            std::cout << "x: " << measState.pos[0] << " " << measState.pos[1] << " " << measState.pos[2] << std::endl;
             std::cout << "measState.errors" << std::endl;
-            dumpMatrix(measState.errors);
+            dumpMatrix(measState.errors());
 
             std::cout << "updatedState" << std::endl;
             std::cout << "x: " << updatedState.parameters[0] << " " << updatedState.parameters[1] << " " << updatedState.parameters[2] << std::endl;
