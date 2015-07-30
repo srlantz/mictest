@@ -48,8 +48,8 @@ void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec
     {
       const Hit &hit = layerHits[hi][trk.getHitIdx(hi)];
 
-      msErr[hi].CopyIn(itrack, hit.error().Array());
-      msPar[hi].CopyIn(itrack, hit.parameters().Array());
+      msErr[hi].CopyIn(itrack, hit.errArray());
+      msPar[hi].CopyIn(itrack, hit.posArray());
     }
   }
 }
@@ -170,8 +170,8 @@ void MkFitter::InputHitsOnly(std::vector<Hit>& hits, int beg, int end)
   {
     Hit &hit = hits[itrack];
 
-    msErr[Nhits].CopyIn(itrack, hit.error().Array());
-    msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+    msErr[Nhits].CopyIn(itrack, hit.errArray());
+    msPar[Nhits].CopyIn(itrack, hit.posArray());
   }
   Nhits++;
 }
@@ -278,8 +278,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
     //#pragma simd
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -323,8 +323,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
       HitsIdx[Nhits](itrack, 0, 0) = bestHit[itrack];//fixme should add the offset
     }
@@ -375,8 +375,8 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
     //fixme: please vectorize me...
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -663,8 +663,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -725,8 +725,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     {
       if ( XHitBegin.At(itrack, 0, 0) >= XHitEnd.At(itrack, 0, 0) ) continue;//is this going to break vectorization and also crash?
       Hit &hit = bunch_of_hits.m_hits[std::min(XHitBegin.At(itrack, 0, 0) + hit_cnt, XHitEnd.At(itrack, 0, 0) - 1)];//redo the last hit in case of overflow
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
     
 #else //NO_GATHER
@@ -804,8 +804,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 	  
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
       HitsIdx[Nhits](itrack, 0, 0) = XHitBegin.At(itrack, 0, 0) + bestHit[itrack];
     }
@@ -842,8 +842,8 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -1193,8 +1193,8 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
     {
       if ( idxs[i].second.hitIdx<0 ) continue;
       Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
   
   updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
