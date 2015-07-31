@@ -11,7 +11,7 @@ namespace Config
   static const float    PI = 3.14159265358979323846;
   static const float TwoPI = 6.28318530717958647692;
   
-  static constexpr const int   nPhiPart   = 80; // 63;
+  static constexpr const int   nPhiPart   = 1260;//80; // 63;
   static constexpr const float nPhiFactor = nPhiPart / TwoPI;
   static constexpr const int   nEtaPart   = 11; // 10;
 
