@@ -11,7 +11,8 @@ typedef std::vector<int> HitIdxVec;
 struct TrackState
 {
 public:
-  TrackState() : valid(true) {}
+TrackState() : valid(true) {}
+TrackState(SVector6 pars, SMatrixSym66 errs, int q) : parameters(pars), errors(errs), charge(q), valid(true) {}
   SVector6 parameters;
   SMatrixSym66 errors;
   int charge;
@@ -23,46 +24,15 @@ class Track
 public:
   Track() {}
 
-  Track(const TrackState& state, const HitVec& hits, float chi2) : state_(state), hits_(hits), chi2_(chi2)
-  {
-    //hitIdxVec_.reserve(12);
-  }
-  Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitVec& hits, float chi2) 
-    : hits_(hits), chi2_(chi2) 
-  {
-    state_.charge=charge;
-    state_.errors=errors;
-    state_.parameters = SVector6(position.At(0),position.At(1),position.At(2),momentum.At(0),momentum.At(1),momentum.At(2));
-    state_.valid = true;
-
-    //hitIdxVec_.reserve(12);
-  }
-  Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitVec& hits, float chi2, const HitVec& initHits)
-    : hits_(hits), initHits_(initHits), chi2_(chi2) 
-  {
-    state_.charge=charge;
-    state_.errors=errors;
-    state_.parameters = SVector6(position.At(0),position.At(1),position.At(2),momentum.At(0),momentum.At(1),momentum.At(2));
-    state_.valid = true;
-
-    //hitIdxVec_.reserve(12);
-  }
-  Track(int charge, const SVector6& parameters, const SMatrixSym66& errors, const HitVec& hits, float chi2)
-    : hits_(hits), chi2_(chi2) 
-  {
-    state_.charge=charge;
-    state_.errors=errors;
-    state_.parameters = parameters;
-    state_.valid = true;
-
-    //hitIdxVec_.reserve(12);
-  }
-  Track(TrackState state, float chi2, int label) :
+  Track(const TrackState& state, float chi2, int label, int nHits, const int* hitIdxArr) :
     state_(state),
     chi2_(chi2),
     label_(label)
   {
-    //hitIdxVec_.reserve(12);
+    for (int h = 0; h < nHits; ++h)
+    {
+      addHitIdx(hitIdxArr[h],0.);
+    }
   }
   
   ~Track(){}
@@ -91,13 +61,19 @@ public:
   float posR()   const { return getHypot(state_.parameters[0],state_.parameters[1]); }
   float pT()     const { return getHypot(state_.parameters[3],state_.parameters[4]); }
 
-  const HitVec& hitsVector() const {return hits_;}
-  const HitVec& initHitsVector() const {return initHits_;}
-
-  void addHit(const Hit& hit,float chi2) { hits_.push_back(hit); chi2_ += chi2; }
-  void addHitIdx(int hitIdx, float chi2)
+  //this function is very inefficient, use only for debug and validation!
+  //currenlty used in fittest...
+  const HitVec hitsVector(const std::vector<HitVec>& globalHitVec) const 
   {
-    // hitIdxVec_.push_back(hitIdx);
+    HitVec hitsVec;
+    for (int ihit = 0; ihit <= hitIdxPos_ ; ++ihit){
+      hitsVec.push_back( globalHitVec[ihit][ hitIdxArr_[ihit] ] );
+    }
+    return hitsVec;
+  }
+
+  void addHitIdx(int hitIdx,float chi2)
+  {
     hitIdxArr_[++hitIdxPos_] = hitIdx;
     if (hitIdx >= 0) ++nGoodHitIdx_; chi2_+=chi2;
   }
@@ -105,18 +81,15 @@ public:
   int  getHitIdx(int posHitIdx) const
   {
     return hitIdxArr_[posHitIdx];
-    // return hitIdxVec_[posHitIdx];
   }
 
   void resetHits()
   {
-    hits_.clear();
-    // hitIdxVec_.clear();
     hitIdxPos_   = -1;
     nGoodHitIdx_ = 0;
   }
-  int  nHits()   const { return hits_.size(); }
-  int  nHitIdx() const { return nGoodHitIdx_; }
+  int  nFoundHits() const { return nGoodHitIdx_; }
+  int  nTotalHits() const { return hitIdxPos_+1; }
 
   void setCharge(int chg)  {state_.charge=chg;}
   void setChi2(float chi2) {chi2_=chi2;}
@@ -124,22 +97,19 @@ public:
 
   void setState(TrackState newState) {state_=newState;}
 
-  SimTkIDInfo SimTrackIDInfo() const;
+  SimTkIDInfo SimTrackIDInfo(const std::vector<HitVec>& globalHitVec) const;
 
-  Track clone() const {return Track(state_,hits_,chi2_);}
-  Track clone_for_io() { return Track(state_,chi2_,label_);}
+  Track clone() const { return Track(state_,chi2_,label_,nTotalHits(),hitIdxArr_); }
+  /* Track clone_for_io() { return Track(state_,chi2_,label_); } */
 
-  void write_out(FILE *fp);
-  void read_in  (FILE *fp);
+  /* void write_out(FILE *fp); */
+  /* void read_in  (FILE *fp); */
 
 private:
   TrackState state_;
-  HitVec hits_;
-  HitVec initHits_;
-  // HitIdxVec hitIdxVec_;
+  float chi2_ = 0.;
   int   hitIdxArr_[10];
   int   hitIdxPos_ = -1;
-  float chi2_;
   int   nGoodHitIdx_ =  0;
   int   label_       = -1;
 };

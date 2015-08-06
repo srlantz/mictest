@@ -7,7 +7,7 @@
 #define SCATTER_XYZ
 
 void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVec& hits, unsigned int itrack,
-                       int& charge, float pt, const Geometry& geom, HitVec& initHits)
+                       int& charge, float pt, const Geometry& geom, HitVec& initHits, MCHitInfoVec& initialhitinfo)
 {
 #ifdef DEBUG
   bool debug = false;
@@ -292,10 +292,13 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
 #endif
 
     SVector3 initVecXYZ(initX,initY,initZ);
-    Hit initHitXYZ(initVecXYZ,covXYZ,itrack,simLayer,layer_counts[simLayer]); 
+    int index = 10*itrack + ihit;
+    Hit initHitXYZ(initVecXYZ,covXYZ,index); 
+    MCHitInfo initHitInfo(itrack,simLayer,layer_counts[simLayer]);
     initHits.push_back(initHitXYZ);
+    initialhitinfo.push_back(initHitInfo);
 
-    Hit hit1(x1,covXYZ,initHitXYZ.mcHitInfo());
+    Hit hit1(x1,covXYZ,index);
     hits.push_back(hit1);
     tmpState = propState;
 

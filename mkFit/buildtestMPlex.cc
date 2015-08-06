@@ -24,14 +24,14 @@ bool sortCandListByHitsChi2(MkFitter::IdxChi2List cand1,MkFitter::IdxChi2List ca
 
 bool sortByHitsChi2(std::pair<Track, TrackState> cand1,std::pair<Track, TrackState> cand2)
 {
-  if (cand1.first.nHits()==cand2.first.nHits()) return cand1.first.chi2()<cand2.first.chi2();
-  return cand1.first.nHits()>cand2.first.nHits();
+  if (cand1.first.nFoundHits()==cand2.first.nFoundHits()) return cand1.first.chi2()<cand2.first.chi2();
+  return cand1.first.nFoundHits()>cand2.first.nFoundHits();
 }
 
 bool sortCandByHitsChi2(Track cand1,Track cand2)
 {
-  if (cand1.nHitIdx()==cand2.nHitIdx()) return cand1.chi2()<cand2.chi2();
-  return cand1.nHitIdx()>cand2.nHitIdx();
+  if (cand1.nFoundHits()==cand2.nFoundHits()) return cand1.chi2()<cand2.chi2();
+  return cand1.nFoundHits()>cand2.nFoundHits();
 }
 
 bool sortByPhi(Hit hit1,Hit hit2)
@@ -74,12 +74,14 @@ bool sortByZ(const Hit& hit1, const Hit& hit2){
 
 } // end unnamed namespace
 
-double runBuildingTest(std::vector<Track>& evt_sim_tracks/*, std::vector<Track>& rectracks*/) {
+double runBuildingTest(Event& ev) {
+
+  std::vector<Track>& evt_sim_tracks = ev.simTracks_;
 
    std::cout << "total evt_sim_tracks=" << evt_sim_tracks.size() << std::endl;
    for (unsigned int itrack=0;itrack<evt_sim_tracks.size();++itrack) {
      Track track = evt_sim_tracks[itrack];
-     std::cout << "SM - simtrack with nHits=" << track.nHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1])<< std::endl;
+     std::cout << "SM - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1])<< std::endl;
    }
 
    const unsigned int maxCand = Config::maxCand;
@@ -87,20 +89,13 @@ double runBuildingTest(std::vector<Track>& evt_sim_tracks/*, std::vector<Track>&
    const float nSigma = Config::nSigma;
    const float minDPhi = Config::minDPhi;
   
-   std::vector<std::vector<Hit> > evt_lay_hits(10);//hits per layer
+   std::vector<std::vector<Hit> > evt_lay_hits = ev.layerHits_;//hits per layer
    std::vector<Track> evt_seeds;
    std::vector<Track> evt_track_candidates;
 
    //first is first hit index in bin, second is size of this bin
    std::vector<std::vector<BinInfo> > evt_lay_phi_hit_idx(10);//phi partitioning map
    // Vector of vectors of std::pairs. A vector of maps, although vector is fixed to layer, so really array of maps, where maps are phi bins and the number of hits in those phi bins
-
-   for (unsigned int itrack=0;itrack<evt_sim_tracks.size();++itrack) {
-     //fill vector of hits in each layer (assuming there is one hit per layer in hits vector)
-     for (unsigned int ilay=0;ilay<evt_sim_tracks[itrack].nHits();++ilay) {
-       evt_lay_hits[ilay].push_back(evt_sim_tracks[itrack].hitsVector()[ilay]);
-     }
-   }//end of track simulation loop
 
    //sort in phi and dump hits per layer, fill phi partitioning
    for (unsigned int ilay=0;ilay<evt_lay_hits.size();++ilay) {
@@ -133,19 +128,19 @@ double runBuildingTest(std::vector<Track>& evt_sim_tracks/*, std::vector<Track>&
    for (int itrack=0;itrack<evt_sim_tracks.size();++itrack)
    {
      Track& trk = evt_sim_tracks[itrack];
-     const HitVec& hits = trk.hitsVector();
+     const HitVec& hits = trk.hitsVector(evt_lay_hits);
      TrackState updatedState = trk.state();
-     std::vector<Hit> seedhits;
+     HitIdxVec seedhits;
      for (int ihit=0;ihit<nhits_per_seed;++ihit)
      {
        //seeds have 3 hits
        TrackState       propState = propagateHelixToR(updatedState,hits[ihit].r());
        MeasurementState measState = hits[ihit].measurementState();
        updatedState = updateParameters(propState, measState);
-       seedhits.push_back(hits[ihit]);//fixme chi2
+       seedhits.push_back(trk.getHitIdx(ihit));//fixme chi2
      }
-     Track seed(updatedState,seedhits,0.);//fixme chi2
-     //std::cout << "SM - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
+     Track seed(updatedState,0.,itrack,nhits_per_seed,&seedhits[0]);//fixme chi2
+     //std::cout << "SM - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
      evt_seeds.push_back(seed);
    }
 
@@ -157,7 +152,7 @@ double runBuildingTest(std::vector<Track>& evt_sim_tracks/*, std::vector<Track>&
    std::cout << "found total tracks=" << evt_track_candidates.size() << std::endl;
    for (unsigned int itkcand=0;itkcand<evt_track_candidates.size();++itkcand) {
      Track tkcand = evt_track_candidates[itkcand];
-     std::cout << "SM - found track with nHits=" << tkcand.nHits() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
+     std::cout << "SM - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
    }
 
    return time;
@@ -315,13 +310,13 @@ void processCandidates(std::pair<Track, TrackState>& cand,std::vector<std::pair<
     if ((chi2<chi2Cut)&&(chi2>0.)) {//fixme 
       TrackState tmpUpdatedState = updateParameters(propState, hitMeas);
       Track tmpCand = tkcand.clone();
-      tmpCand.addHit(hitCand,chi2);
+      tmpCand.addHitIdx(ihit,chi2);
       tmp_candidates.push_back(std::pair<Track, TrackState>(tmpCand,tmpUpdatedState));
     }
   }//end of consider hits on layer loop
 
   //add also the candidate for no hit found
-  if (tkcand.nHits()==ilay) {//only if this is the first missing hit
+  if (tkcand.nFoundHits()==ilay) {//only if this is the first missing hit
     tmp_candidates.push_back(std::pair<Track, TrackState>(tkcand,propState));
   }
 
@@ -353,15 +348,17 @@ void processCandidates(std::pair<Track, TrackState>& cand,std::vector<std::pair<
 // runBuildTestBestHit
 //==============================================================================
 
-double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/)
+double runBuildingTestBestHit(Event& ev)
 {
   printf("Hello, sizeof(Track)=%d, sizeof(Hit)=%d\n\n", sizeof(Track), sizeof(Hit));
+
+  std::vector<Track>& simtracks = ev.simTracks_;
 
   std::cout << "total simtracks=" << simtracks.size() << std::endl;
 #ifdef DEBUG
   for (int itrack=0;itrack<simtracks.size();++itrack) {
     Track track = simtracks[itrack];
-    std::cout << "SX - simtrack with nHits=" << track.nHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
+    std::cout << "SX - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
   }
 #endif
 
@@ -370,19 +367,19 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
   for (int itrack=0; itrack < simtracks.size(); ++itrack)
   {
     //fill vector of hits in each layer (assuming there is one hit per layer in hits vector)
-    for (int ilay = 0; ilay < simtracks[itrack].nHits(); ++ilay)
+    for (int ilay = 0; ilay < simtracks[itrack].nTotalHits(); ++ilay)
     {
 #ifdef DEBUG
       std::cout << "simtrack #" << itrack << " lay=" << ilay 
-		<< " x=" <<  simtracks[itrack].hitsVector()[ilay].x()
-		<< " y=" <<  simtracks[itrack].hitsVector()[ilay].y()
-		<< " z=" <<  simtracks[itrack].hitsVector()[ilay].z()
-		<< " r=" <<  simtracks[itrack].hitsVector()[ilay].r()
-		<< " eta=" <<  simtracks[itrack].hitsVector()[ilay].eta()
-		<< " phi=" <<  simtracks[itrack].hitsVector()[ilay].phi()
+		<< " x=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].x()
+		<< " y=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].y()
+		<< " z=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].z()
+		<< " r=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].r()
+		<< " eta=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].eta()
+		<< " phi=" <<  simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()
 		<< std::endl;
 #endif
-      event_of_hits.InsertHit(simtracks[itrack].hitsVector()[ilay], ilay);
+      event_of_hits.InsertHit(simtracks[itrack].hitsVector(ev.layerHits_)[ilay], ilay);
     }
   }
 
@@ -423,7 +420,7 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
   const int nhits_per_seed = 3;
   for (unsigned int itrack=0;itrack<simtracks.size();++itrack) {
     Track& trk = simtracks[itrack];
-    const HitVec& hits = trk.hitsVector();
+    const HitVec& hits = trk.hitsVector(ev.layerHits_);
     TrackState updatedState = trk.state();
     /*
     std::cout << "updatedState pos=" << updatedState.parameters[0] << " , " << updatedState.parameters[1] << " , " << updatedState.parameters[2]
@@ -431,7 +428,7 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
 	      << "\n err=" << updatedState.errors
 	      << std::endl;
     */
-    std::vector<Hit> seedhits;
+    HitIdxVec seedhits;
     for (int ihit=0;ihit<nhits_per_seed;++ihit) {//seeds have 3 hits
       TrackState       propState = propagateHelixToR(updatedState,hits[ihit].r());
       /*
@@ -449,14 +446,10 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
 		<< "\n err=" << updatedState.errors
 		<< std::endl;
       */
-      seedhits.push_back(hits[ihit]);//fixme chi2
+      seedhits.push_back(trk.getHitIdx(ihit));//fixme chi2
     }
-    Track seed(updatedState,seedhits,0.);//fixme chi2
-    for (int ihit=0;ihit<nhits_per_seed;++ihit)
-      {
-	seed.addHitIdx(ihit,0);//fixme this should be the real idx not ihit
-      }
-    //std::cout << "SM - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
+    Track seed(updatedState,0.,itrack,nhits_per_seed,&seedhits[0]);//fixme chi2
+    //std::cout << "SM - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
     recseeds.push_back(seed);
   }
 
@@ -466,7 +459,7 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
   for (int iseed=0;iseed<recseeds.size();++iseed)
   {
     Track& seed = recseeds[iseed];
-    std::cout << "SM - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
+    std::cout << "SM - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
   }
 #endif
 
@@ -485,7 +478,7 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
     for (int iseed = 0; iseed < etabin_of_candidates.m_fill_index; iseed++)
     {
       Track& seed = etabin_of_candidates.m_candidates[iseed];
-      std::cout << "SM - found seed with nHitIdx=" << seed.nHitIdx() << " chi2=" << seed.chi2() 
+      std::cout << "SM - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() 
                 << " x=" << seed.position()[0] << " y=" << seed.position()[1] << " z=" << seed.position()[2] 
                 << " px=" << seed.momentum()[0] << " py=" << seed.momentum()[1] << " pz=" << seed.momentum()[2] 
                 << " pT=" << sqrt(seed.momentum()[0]*seed.momentum()[0]+seed.momentum()[1]*seed.momentum()[1]) 
@@ -667,11 +660,11 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
          if (pt > 9 && pt < 11) ++cnt1;
          if (pt > 8 && pt < 12) ++cnt2;
 #ifdef PRINTOUTS_FOR_PLOTS
-         std::cout << "SM - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
+         std::cout << "SM - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
 #endif
 
 #ifdef DEBUG
-         std::cout << "SM - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
+         std::cout << "SM - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
 #endif
        }
      }
@@ -705,13 +698,15 @@ double runBuildingTestBestHit(std::vector<Track>& simtracks/*, std::vector<Track
 // runBuildTestPlexOld
 //==============================================================================
 
-double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/)
+double runBuildingTestPlexOld(Event& ev)
 {
+
+  std::vector<Track>& simtracks = ev.simTracks_;
 
    std::cout << "total simtracks=" << simtracks.size() << std::endl;
    for (int itrack=0;itrack<simtracks.size();++itrack) {
      Track track = simtracks[itrack];
-     std::cout << "MX - simtrack with nHits=" << track.nHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1])<< std::endl;
+     std::cout << "MX - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1])<< std::endl;
    }
 
    // XXX What if there's a missing / double layer?
@@ -719,15 +714,7 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
    // And pass the number in on each "setup" call.
    // Reserves should be made for maximum possible number (but this is just
    // measurments errors, params).
-   std::vector<std::vector<Hit> > evt_lay_hits(10);//hits per layer
-
-   for (int itrack=0;itrack<simtracks.size();++itrack) {
-     //fill vector of hits in each layer (assuming there is one hit per layer in hits vector)
-     for (int ilay=0;ilay<simtracks[itrack].nHits();++ilay) {
-       evt_lay_hits[ilay].push_back(simtracks[itrack].hitsVector()[ilay]);
-     }
-   }//end of track simulation loop
-
+   std::vector<std::vector<Hit> > evt_lay_hits = ev.layerHits_;
 
    BinInfoMap segmentMap_;
    segmentMap_.resize(10);//geom_.CountLayers()
@@ -852,11 +839,11 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
 
       MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
 
-      mkfp->InputTracksAndHits(simtracks, itrack, end);
+      mkfp->InputTracksAndHits(simtracks, ev.layerHits_, itrack, end);
 
       mkfp->FitTracks();
 
-      mkfp->OutputFittedTracksAndHits(recseeds, itrack, end);
+      mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end);
    }
 
    //ok now, we should have all seeds fitted in recseeds
@@ -864,7 +851,7 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
    std::cout << "found total seeds=" << recseeds.size() << std::endl;
    for (int iseed=0;iseed<recseeds.size();++iseed) {
      Track seed = recseeds[iseed];
-     std::cout << "MX - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
+     std::cout << "MX - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << std::endl;
    }
    std::cout << "loop over layers" << std::endl;
 #endif
@@ -1048,7 +1035,7 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
 	 {
 	   for (int itkcand=0;itkcand<track_candidates[iseed].size();++itkcand) {
 	     Track& tkcand = track_candidates[iseed][itkcand];
-	     std::cout << "MX - found track candidate with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << std::endl;
+	     std::cout << "MX - found track candidate with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << std::endl;
 	     tottk++;
 	   }
 	 }
@@ -1090,7 +1077,7 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
      {
        for (int itkcand=0;itkcand<track_candidates[iseed].size();++itkcand) {
 	 Track& tkcand = track_candidates[iseed][itkcand];
-	 std::cout << "MX - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
+	 std::cout << "MX - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << sqrt(tkcand.momentum()[0]*tkcand.momentum()[0]+tkcand.momentum()[1]*tkcand.momentum()[1]) << std::endl;
 	 tottk++;
        }
      }
@@ -1125,15 +1112,17 @@ double runBuildingTestPlexOld(std::vector<Track>& simtracks/*, std::vector<Track
 // runBuildTestPlexBestHit
 //==============================================================================
 
-double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/)
+double runBuildingTestPlexBestHit(Event& ev)
 {
   printf("Hello, runBuildingTestPlexBestHit sizeof(Track)=%d, sizeof(Hit)=%d, vusize=%i, num_th=%i\n\n", sizeof(Track), sizeof(Hit), MPT_SIZE, NUM_THREADS);
 
+  std::vector<Track>& simtracks = ev.simTracks_;
+  
   std::cout << "total simtracks=" << simtracks.size() << std::endl;
 #ifdef DEBUG
   for (int itrack=0;itrack<simtracks.size();++itrack) {
     Track track = simtracks[itrack];
-    std::cout << "MX - simtrack with nHits=" << track.nHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
+    std::cout << "MX - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
   }
 #endif
 
@@ -1147,9 +1136,9 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
     }
 
     //fill vector of hits in each layer (assuming there is one hit per layer in hits vector)
-    for (int ilay = 0; ilay < simtracks[itrack].nHits(); ++ilay)
+    for (int ilay = 0; ilay < simtracks[itrack].nTotalHits(); ++ilay)
     {
-      event_of_hits.InsertHit(simtracks[itrack].hitsVector()[ilay], ilay);
+      event_of_hits.InsertHit(simtracks[itrack].hitsVector(ev.layerHits_)[ilay], ilay);
     }
   }
 
@@ -1222,11 +1211,11 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 
     mkfp->SetNhits(3);//just to be sure (is this needed?)
 
-    mkfp->InputTracksAndHits(simtracks, itrack, end);
+    mkfp->InputTracksAndHits(simtracks, ev.layerHits_, itrack, end);
 
     mkfp->FitTracks();
 
-    mkfp->OutputFittedTracksAndHits(recseeds, itrack, end);
+    mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end);
   }
 
   //ok now, we should have all seeds fitted in recseeds
@@ -1235,7 +1224,7 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
   for (int iseed=0;iseed<recseeds.size();++iseed)
   {
     Track& seed = recseeds[iseed];
-    std::cout << "MX - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
+    std::cout << "MX - found seed with nTotalHits=" << seed.nTotalHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
   }
 #endif
 
@@ -1259,7 +1248,7 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
     for (int iseed = 0; iseed < etabin_of_candidates.m_fill_index; iseed++)
     {
       Track& seed = etabin_of_candidates.m_candidates[iseed];
-      std::cout << "MX - found seed with nHitIdx=" << seed.nHitIdx() << " chi2=" << seed.chi2() 
+      std::cout << "MX - found seed with nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() 
                 << " x=" << seed.position()[0] << " y=" << seed.position()[1] << " z=" << seed.position()[2] 
                 << " px=" << seed.momentum()[0] << " py=" << seed.momentum()[1] << " pz=" << seed.momentum()[2] 
                 << " pT=" << sqrt(seed.momentum()[0]*seed.momentum()[0]+seed.momentum()[1]*seed.momentum()[1]) 
@@ -1374,7 +1363,7 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
          if (pr > 0.9 && pr < 1.1) ++cnt1;
          if (pr > 0.8 && pr < 1.2) ++cnt2;
 
-         if (tkcand.nHitIdx() >= 8)
+         if (tkcand.nFoundHits() >= 8)
          {
            ++cnt_8;
            if (pr > 0.9 && pr < 1.1) ++cnt1_8;
@@ -1382,10 +1371,10 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
          }
 
 #ifdef PRINTOUTS_FOR_PLOTS
-         std::cout << "MXBH - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
+         std::cout << "MXBH - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
 #ifdef DEBUG
-         std::cout << "MXBH - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
+         std::cout << "MXBH - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
        }
      }
@@ -1409,12 +1398,14 @@ double runBuildingTestPlexBestHit(std::vector<Track>& simtracks/*, std::vector<T
 //==============================================================================
 
 #ifdef TEST_CLONE_ENGINE
-double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/, CandCloner& cloner)
+double runBuildingTestPlex(Event& ev, CandCloner& cloner)
 #else
-double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& rectracks*/)
+double runBuildingTestPlex(Event& ev)
 #endif
 {
   printf("Hello, runBuildingTestPlex sizeof(Track)=%d, sizeof(Hit)=%d, vusize=%i, num_th=%i\n\n", sizeof(Track), sizeof(Hit), MPT_SIZE, NUM_THREADS);
+
+  std::vector<Track>& simtracks = ev.simTracks_;
 
   std::cout << "total simtracks=" << simtracks.size() << std::endl;
 #ifdef DEBUG
@@ -1429,7 +1420,7 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
   //dump sim tracks
   for (int itrack=0;itrack<simtracks.size();++itrack) {
     Track track = simtracks[itrack];
-    std::cout << "MX - simtrack with nHits=" << track.nHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
+    std::cout << "MX - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
   }
 #endif
 
@@ -1443,11 +1434,11 @@ double runBuildingTestPlex(std::vector<Track>& simtracks/*, std::vector<Track>& 
     }
 
     //fill vector of hits in each layer (assuming there is one hit per layer in hits vector)
-    for (int ilay = 0; ilay < simtracks[itrack].nHits(); ++ilay)
+    for (int ilay = 0; ilay < simtracks[itrack].nTotalHits(); ++ilay)
     {
-      event_of_hits.InsertHit(simtracks[itrack].hitsVector()[ilay], ilay);
+      event_of_hits.InsertHit(simtracks[itrack].hitsVector(ev.layerHits_)[ilay], ilay);
 #ifdef DEBUG
-      std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector()[ilay].position() << " phi=" << simtracks[itrack].hitsVector()[ilay].phi() << " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector()[ilay].phi()) << std::endl;
+      std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].position() << " phi=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi() << " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()) << std::endl;
 #endif
     }
   }
@@ -1527,11 +1518,11 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 
     mkfp->SetNhits(3);//just to be sure (is this needed?)
 
-    mkfp->InputTracksAndHits(simtracks, itrack, end);
+    mkfp->InputTracksAndHits(simtracks, ev.layerHits_, itrack, end);
 
     mkfp->FitTracks();
 
-    mkfp->OutputFittedTracksAndHits(recseeds, itrack, end);
+    mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end);
   }
 
   //ok now, we should have all seeds fitted in recseeds
@@ -1540,7 +1531,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
   for (int iseed=0;iseed<recseeds.size();++iseed)
   {
     Track& seed = recseeds[iseed];
-    std::cout << "MX - found seed with nHits=" << seed.nHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
+    std::cout << "MX - found seed with nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
   }
 #endif
 
@@ -1564,7 +1555,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
     for (int iseed = 0; iseed < etabin_of_comb_candidates.m_fill_index; iseed++)
     {
       Track& seed = etabin_of_comb_candidates.m_candidates[iseed].front();
-      std::cout << "MX - found seed with nHitIdx=" << seed.nHitIdx() << " chi2=" << seed.chi2() 
+      std::cout << "MX - found seed with nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() 
                 << " x=" << seed.position()[0] << " y=" << seed.position()[1] << " z=" << seed.position()[2] 
                 << " px=" << seed.momentum()[0] << " py=" << seed.momentum()[1] << " pz=" << seed.momentum()[2] 
                 << " pT=" << sqrt(seed.momentum()[0]*seed.momentum()[0]+seed.momentum()[1]*seed.momentum()[1]) 
@@ -1844,7 +1835,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
          if (pr > 0.9 && pr < 1.1) ++cnt1;
          if (pr > 0.8 && pr < 1.2) ++cnt2;
 
-         if (tkcand.nHitIdx() >= 8)
+         if (tkcand.nFoundHits() >= 8)
          {
            ++cnt_8;
            if (pr > 0.9 && pr < 1.1) ++cnt1_8;
@@ -1852,10 +1843,10 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
          }
 
 #ifdef PRINTOUTS_FOR_PLOTS
-         std::cout << "MXFC - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
+         std::cout << "MXFC - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
 #ifdef DEBUG
-         std::cout << "MXFC - found track with nHitIdx=" << tkcand.nHitIdx() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
+         std::cout << "MXFC - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
        }
      }

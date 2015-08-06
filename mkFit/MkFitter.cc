@@ -24,7 +24,7 @@ void MkFitter::PrintPt(int idx)
 
 //==============================================================================
 
-void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, int beg, int end)
+void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec>& layerHits, int beg, int end)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -46,10 +46,10 @@ void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, int beg, int end)
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-      const Hit &hit = trk.hitsVector()[hi];
+      const Hit &hit = layerHits[hi][trk.getHitIdx(hi)];
 
-      msErr[hi].CopyIn(itrack, hit.error().Array());
-      msPar[hi].CopyIn(itrack, hit.parameters().Array());
+      msErr[hi].CopyIn(itrack, hit.errArray());
+      msPar[hi].CopyIn(itrack, hit.posArray());
     }
   }
 }
@@ -170,8 +170,8 @@ void MkFitter::InputHitsOnly(std::vector<Hit>& hits, int beg, int end)
   {
     Hit &hit = hits[itrack];
 
-    msErr[Nhits].CopyIn(itrack, hit.error().Array());
-    msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+    msErr[Nhits].CopyIn(itrack, hit.errArray());
+    msPar[Nhits].CopyIn(itrack, hit.posArray());
   }
   Nhits++;
 }
@@ -214,38 +214,6 @@ void MkFitter::OutputTracks(std::vector<Track>& tracks, int beg, int end, int iC
     tracks[i].setLabel(Label(itrack, 0, 0));
   }
 }
-
-void MkFitter::OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, int end)
-{
-  // Copies last track parameters (updated) into Track objects and up to Nhits.
-  // The tracks vector should be resized to allow direct copying.
-
-  int itrack = 0;
-  for (int i = beg; i < end; ++i, ++itrack)
-  {
-    Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
-    Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
-
-    tracks[i].setCharge(Chg(itrack, 0, 0));
-    tracks[i].setChi2(Chi2(itrack, 0, 0));
-    tracks[i].setLabel(Label(itrack, 0, 0));
-
-    // XXXXX chi2 is not set (also not in SMatrix fit, it seems)
-
-    tracks[i].resetHits();
-    for (int hi = 0; hi < Nhits; ++hi)
-    {
-      Hit hit;
-
-      msErr[hi].CopyOut(itrack, hit.error_nc().Array());
-      msPar[hi].CopyOut(itrack, hit.parameters_nc().Array());
-
-      tracks[i].addHit(hit, 0.);
-      tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0), 0.);
-    }
-  }
-}
-
 
 void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end)
 {
@@ -310,8 +278,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
     //#pragma simd
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -355,8 +323,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
       HitsIdx[Nhits](itrack, 0, 0) = bestHit[itrack];//fixme should add the offset
     }
@@ -407,8 +375,8 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
     //fixme: please vectorize me...
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -695,8 +663,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -757,8 +725,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     {
       if ( XHitBegin.At(itrack, 0, 0) >= XHitEnd.At(itrack, 0, 0) ) continue;//is this going to break vectorization and also crash?
       Hit &hit = bunch_of_hits.m_hits[std::min(XHitBegin.At(itrack, 0, 0) + hit_cnt, XHitEnd.At(itrack, 0, 0) - 1)];//redo the last hit in case of overflow
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
     
 #else //NO_GATHER
@@ -836,8 +804,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 	  
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
       HitsIdx[Nhits](itrack, 0, 0) = XHitBegin.At(itrack, 0, 0) + bestHit[itrack];
     }
@@ -874,8 +842,8 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -1053,8 +1021,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -1225,8 +1193,8 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
     {
       if (idxs[i].second.hitIdx < 0) continue;
       Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
   
   updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);

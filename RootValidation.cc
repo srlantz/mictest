@@ -98,7 +98,7 @@ RootValidation::RootValidation(std::string fileName, bool saveTree)
   }
 }
 
-void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks)
+void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks, const std::vector<HitVec>& evt_sim_hits)
 {
   // these are expensive, only do once per track
   std::vector<float> phi;
@@ -117,7 +117,7 @@ void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks)
     validation_hists_["gen_trk_phi"]->Fill( phi[isim_track] );
     validation_hists_["gen_trk_eta"]->Fill( eta[isim_track] );
     
-    const HitVec& hits = evt_sim_tracks[isim_track].hitsVector();
+    const HitVec& hits = evt_sim_hits[isim_track];
     for (auto&& hit : hits){
       float rad = sqrt(hit.position()[0]*hit.position()[0] + hit.position()[1]*hit.position()[1]);
       validation_hists_["gen_hits_rad"]->Fill( rad );
@@ -154,7 +154,7 @@ void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks)
     } 
     validation_hists_["gen_trk_mindR"]->Fill( mindR );
     validation_hists_["gen_trk_mindPhi"]->Fill( mindPhi );
-    validation_hists_["gen_trk_nHits"]->Fill( evt_sim_tracks[isim_track].nHits());
+    validation_hists_["gen_trk_nHits"]->Fill( evt_sim_tracks[isim_track].nTotalHits());
   }
 }
 
@@ -163,20 +163,20 @@ void RootValidation::fillCandidateHists(const TrackVec& evt_track_candidates)
   std::lock_guard<std::mutex> locker(glock_);
   //dump candidates
   for (auto&& tkcand : evt_track_candidates) {
-    validation_hists_["rec_trk_nHits"]->Fill(tkcand.nHits());
+    validation_hists_["rec_trk_nHits"]->Fill(tkcand.nTotalHits());
     validation_hists_["rec_trk_chi2"]->Fill(tkcand.chi2());
     validation_hists_["rec_trk_phi"]->Fill( getPhi(tkcand.position()[0], tkcand.position()[1]) );
     validation_hists_["rec_trk_Pt"]->Fill( getPt(tkcand.momentum()[0], tkcand.momentum()[1]) );
     validation_hists_["rec_trk_eta"]->Fill( getEta(tkcand.position()[0], tkcand.position()[1], tkcand.position()[2]) );
     if (savetree_) {
-      tk_nhits_ = tkcand.nHits();
+      tk_nhits_ = tkcand.nTotalHits();
       tk_chi2_ = tkcand.chi2();
       buildtree_->Fill();
     }
   }
 }
 
-void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, const TrackVec& evt_sim_tracks){
+void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, const TrackVec& evt_sim_tracks, const std::vector<HitVec>& layerHits){
   std::lock_guard<std::mutex> locker(glock_);
   //setup for assocation; these are dense in simIndex, so use a vector
   std::vector<unsigned int> associated_indices_found_RD(evt_sim_tracks.size()); 
@@ -185,12 +185,12 @@ void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, 
   for (auto&& tkcand : evt_track_candidates) {
 
     // get sim Index --> matching only simTrackID, not hitIDs... probably not a big deal for loopers/overlap
-    SimTkIDInfo candSimIDInfo = tkcand.SimTrackIDInfo();
+    SimTkIDInfo candSimIDInfo = tkcand.SimTrackIDInfo(layerHits);
     unsigned int simtrack     = candSimIDInfo.first;
     unsigned int nHitsMatched = candSimIDInfo.second;
 
     // Check to see if reco track has enough hits matched -- RD
-    unsigned int denom_nHits_RD = tkcand.nHits();
+    unsigned int denom_nHits_RD = tkcand.nTotalHits();
     if (4*nHitsMatched >= 3*denom_nHits_RD){ // if association criterion is passed, save the info
       if (associated_indices_found_RD[simtrack] == 0){ // currently unmatched simtrack, count it towards efficiency 
         
@@ -221,7 +221,7 @@ void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, 
     // Check to see if reco track has enough hits matched -- SD
 
     unsigned int denom_nHits_SD = 0;
-    denom_nHits_SD = evt_sim_tracks[simtrack].nHits();    
+    denom_nHits_SD = evt_sim_tracks[simtrack].nTotalHits();    
     if (4*nHitsMatched >= 3*denom_nHits_SD){ // if association criterion is passed, save the info
       if (associated_indices_found_SD[simtrack] == 0){ // currently unmatched simtrack, count it towards efficiency 
         // for efficiency studies
@@ -311,53 +311,53 @@ void RootValidation::fillFitHitHists(unsigned int hitid, const HitVec& mcInitHit
     std::lock_guard<std::mutex> locker(glock_);
     MeasurementState initMeasState;
     for (auto&& mchit : mcInitHitVec){
-      if(mchit.hitID() == hitid){
+      if(mchit.mcHitTrkID() == hitid){
         initMeasState = mchit.measurementState();
         break;
       }
     }
 
-    x_init   = initMeasState.parameters[0];
-    x_mc     = measState.parameters[0];
-    x_mcerr  = measState.errors[0][0]; // sigma^2 of x_mc (same with y,z)
+    x_init   = initMeasState.parameters()[0];
+    x_mc     = measState.parameters()[0];
+    x_mcerr  = measState.errors()[0][0]; // sigma^2 of x_mc (same with y,z)
     x_prop   = propState.parameters[0];
     x_perr   = propState.errors[0][0]; // sigma^2 of x_prop
     x_update = updatedState.parameters[0];
     x_uerr   = updatedState.errors[0][0]; // sigma^2 of x_update
 
-    y_init   = initMeasState.parameters[1];
-    y_mc     = measState.parameters[1];
-    y_mcerr  = measState.errors[1][1];
+    y_init   = initMeasState.parameters()[1];
+    y_mc     = measState.parameters()[1];
+    y_mcerr  = measState.errors()[1][1];
     y_prop   = propState.parameters[1];
     y_perr   = propState.errors[1][1];
     y_update = updatedState.parameters[1];
     y_uerr   = updatedState.errors[1][1];
 
-    z_init   = initMeasState.parameters[2];
-    z_mc     = measState.parameters[2];
-    z_mcerr  = measState.errors[2][2];
+    z_init   = initMeasState.parameters()[2];
+    z_mc     = measState.parameters()[2];
+    z_mcerr  = measState.errors()[2][2];
     z_prop   = propState.parameters[2];
     z_perr   = propState.errors[2][2];
     z_update = updatedState.parameters[2];
     z_uerr   = updatedState.errors[2][2];
 
-    xy_mcerr = measState.errors[0][1];
+    xy_mcerr = measState.errors()[0][1];
 
-    r_init   = sqrt( initMeasState.parameters[0]*initMeasState.parameters[0] +
-                     initMeasState.parameters[1]*initMeasState.parameters[1] );
-    r_mc     = sqrt( measState.parameters[0]*measState.parameters[0] + 
-                     measState.parameters[1]*measState.parameters[1] ); 
+    r_init   = sqrt( initMeasState.parameters()[0]*initMeasState.parameters()[0] +
+                     initMeasState.parameters()[1]*initMeasState.parameters()[1] );
+    r_mc     = sqrt( measState.parameters()[0]*measState.parameters()[0] + 
+                     measState.parameters()[1]*measState.parameters()[1] ); 
     r_prop   = sqrt( propState.parameters[0]*propState.parameters[0] + 
                      propState.parameters[1]*propState.parameters[1] );
     r_update = sqrt( updatedState.parameters[0]*updatedState.parameters[0] + 
                      updatedState.parameters[1]*updatedState.parameters[1] );
 
-    phi_init   = atan2(initMeasState.parameters[1],initMeasState.parameters[0]);
-    phi_mc     = atan2(measState.parameters[1],measState.parameters[0]);
-    phi_mcerr  = ( measState.errors[0][0]*measState.parameters[0]*measState.parameters[0] +
-                   measState.errors[1][1]*measState.parameters[1]*measState.parameters[1] - 
-                   measState.errors[0][1]*measState.parameters[0]*measState.parameters[1] - 
-                   measState.errors[1][0]*measState.parameters[1]*measState.parameters[0] ) / (r_mc*r_mc); // sigma^2 of phi
+    phi_init   = atan2(initMeasState.parameters()[1],initMeasState.parameters()[0]);
+    phi_mc     = atan2(measState.parameters()[1],measState.parameters()[0]);
+    phi_mcerr  = ( measState.errors()[0][0]*measState.parameters()[0]*measState.parameters()[0] +
+                   measState.errors()[1][1]*measState.parameters()[1]*measState.parameters()[1] - 
+                   measState.errors()[0][1]*measState.parameters()[0]*measState.parameters()[1] - 
+                   measState.errors()[1][0]*measState.parameters()[1]*measState.parameters()[0] ) / (r_mc*r_mc); // sigma^2 of phi
     phi_prop   = atan2(propState.parameters[1],propState.parameters[0]);
     phi_perr   = ( propState.errors[0][0]*propState.parameters[0]*propState.parameters[0] +
                    propState.errors[1][1]*propState.parameters[1]*propState.parameters[1] - 

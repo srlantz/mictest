@@ -20,10 +20,10 @@ class RootValidation : public Validation {
 public:
   RootValidation(std::string fileName, bool saveTree = true);
 
-  void fillSimHists(const TrackVec& evt_sim_tracks) override;
+  void fillSimHists(const TrackVec& evt_sim_tracks, const std::vector<HitVec>& simHits) override;
   void fillCandidateHists(const TrackVec& evt_track_candidates) override;
   //  void fillAssociationHists(TrackVec& evt_track_candidates, TrackVec& evt_sim_tracks, TrackVec& evt_assoc_tracks_RD, TrackVec& evt_assoc_tracks_SD) override;
-  void fillAssociationHists(const TrackVec& evt_track_candidates, const TrackVec& evt_sim_tracks) override;
+  void fillAssociationHists(const TrackVec& evt_track_candidates, const TrackVec& evt_sim_tracks, const std::vector<HitVec>& layerHits) override;
   void fillBuildHists(unsigned int, unsigned int, unsigned int) override;
   void fillFitStateHists(const TrackState&, const TrackState&) override;
   void fillFitHitHists(unsigned int, const HitVec&, const MeasurementState&, const TrackState&, const TrackState&) override;

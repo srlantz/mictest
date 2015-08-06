@@ -138,9 +138,15 @@ struct MCHitInfo
 
 struct MeasurementState
 {
+  SVector3 parameters() const { return SVector3(pos[0],pos[1],pos[2]); }
+  SMatrixSym33 errors() const { 
+    SMatrixSym33 result;
+    for (int i=0;i<6;++i) result.Array()[i]=err[i];
+    return result; 
+  }
 public:
-  SVector3 parameters;
-  SMatrixSym33 errors;
+  float pos[3];
+  float err[6];
 };
 
 class Hit
@@ -150,73 +156,70 @@ public:
 
   Hit(const MeasurementState& state) : state_(state) {}
 
-  Hit(const SVector3& position, const SMatrixSym33& error)
+  Hit(const SVector3& position, const SMatrixSym33& error, int mcHitTrkID)
   {
-    state_.parameters=position;
-    state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, int itrack, int ilayer, int ithLayerHit)
-  {
-    mcHitInfo_.mcTrackID_ = itrack;
-    mcHitInfo_.layer_ = ilayer;
-    mcHitInfo_.ithLayerHit_ = ithLayerHit;
-    state_.parameters=position;
-    state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, const MCHitInfo& mcHitInfo)
-    : mcHitInfo_(mcHitInfo)
-  {
-    state_.parameters=position;
-    state_.errors=error;
+    state_.pos[0]=position[0];
+    state_.pos[1]=position[1];
+    state_.pos[2]=position[2];
+    state_.err[0]=error.Array()[0];
+    state_.err[1]=error.Array()[1];
+    state_.err[2]=error.Array()[2];
+    state_.err[3]=error.Array()[3];
+    state_.err[4]=error.Array()[4];
+    state_.err[5]=error.Array()[5];
+    mcHitTrkID_ = mcHitTrkID;
   }
 
   ~Hit(){}
 
-  const SVector3&     position()   const {return state_.parameters;}
-  const SVector3&     parameters() const {return state_.parameters;}
-  const SMatrixSym33& error()      const {return state_.errors;}
+  const SVector3     position()   const {return state_.parameters();}
+  const SVector3     parameters() const {return state_.parameters();}
+  const SMatrixSym33 error()      const {return state_.errors();}
+
+  const float* posArray() const {return state_.pos;}
+  const float* errArray() const {return state_.err;}
 
   // Non-const versions needed for CopyOut of Matriplex.
-  SVector3&     parameters_nc() {return state_.parameters;}
-  SMatrixSym33& error_nc()      {return state_.errors;}
+  SVector3     parameters_nc() {return state_.parameters();}
+  SMatrixSym33 error_nc()      {return state_.errors();}
 
   float r() const {
-    return sqrt(state_.parameters.At(0)*state_.parameters.At(0) +
-                state_.parameters.At(1)*state_.parameters.At(1));
+    return sqrt(state_.pos[0]*state_.pos[0] +
+                state_.pos[1]*state_.pos[1]);
   }
   float x() const {
-    return state_.parameters.At(0);
+    return state_.pos[0];
   }
   float y() const {
-    return state_.parameters.At(1);
+    return state_.pos[1];
   }
   float z() const {
-    return state_.parameters.At(2);
+    return state_.pos[2];
   }
   float phi() const {
-    return getPhi(state_.parameters.At(0), state_.parameters.At(1));
+    return getPhi(state_.pos[0], state_.pos[1]);
   }
   float eta() const {
-    return getEta(state_.parameters.At(0), state_.parameters.At(1), state_.parameters.At(2));
+    return getEta(state_.pos[0], state_.pos[1], state_.pos[2]);
   }
+
+  int mcHitTrkID() const { return mcHitTrkID_; }
+  int mcTrackID() const { return mcHitTrkID_ / 10; }
+  int mcHitID() const { return mcHitTrkID_ % 10; }
 
   const MeasurementState& measurementState() const {
     return state_;
   }
 
-  const MCHitInfo& mcHitInfo() const {return mcHitInfo_;}
-  int mcTrackID() const {return mcHitInfo_.mcTrackID_;}
-  int layer() const {return mcHitInfo_.layer_;}
-  int ithLayerHit() const {return mcHitInfo_.ithLayerHit_;}
-  int hitID() const {return mcHitInfo_.mcHitID_;}
-
 private:
   MeasurementState state_;
-  MCHitInfo        mcHitInfo_;
+  // unique hit index per event, defined as (10*simtrack_idex + 1*hit_idx). 
+  // the factor 10* is ok since we have 10 hits per track, it can become 100* if we allow for more. 
+  // we will need a different indexing when we'll consider htis from real detector
+  int mcHitTrkID_;
 };
 
 typedef std::vector<Hit> HitVec;
+typedef std::vector<MCHitInfo> MCHitInfoVec;
 
 #endif

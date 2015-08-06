@@ -40,6 +40,10 @@ Event::Event(const Geometry& g, Validation& v, int threads) : geom_(g), validati
 void Event::Simulate(unsigned int nTracks)
 {
   simTracks_.resize(nTracks);
+  simHits_.resize(nTracks);
+  simHitIdxs_.resize(nTracks);
+  initialHits_.resize(nTracks);
+  initialMCHitsInfo_.resize(nTracks);
   for (auto&& l : layerHits_) {
     l.reserve(nTracks);
   }
@@ -59,25 +63,35 @@ void Event::Simulate(unsigned int nTracks)
       SVector3 mom;
       SMatrixSym66 covtrk;
       HitVec hits, initialhits;
+      MCHitInfoVec initialhitinfo;
       // unsigned int starting_layer  = 0; --> for displaced tracks, may want to consider running a separate Simulate() block with extra parameters
 
       int q=0;//set it in setup function
       float pt = 0.5+g_unif(g_gen)*9.5;//this input, 0.5<pt<10 GeV (below ~0.5 GeV does not make 10 layers)
-      setupTrackByToyMC(pos,mom,covtrk,hits,itrack,q,pt,tmpgeom,initialhits);
-      Track sim_track(q,pos,mom,covtrk,hits,0,initialhits);
+      setupTrackByToyMC(pos,mom,covtrk,hits,itrack,q,pt,tmpgeom,initialhits,initialhitinfo);
+      SVector6 pars(pos[0],pos[1],pos[2],mom[0],mom[1],mom[2]);
+      TrackState tk_state(pars,covtrk,q);
+      Track sim_track;
+      sim_track.setState(tk_state);
+      sim_track.setLabel(itrack);
       simTracks_[itrack] = sim_track;
+      simHits_[itrack] = hits;
+      initialHits_[itrack] = initialhits;
+      initialMCHitsInfo_[itrack] = initialhitinfo;
     }
 #ifdef TBB
   });
 #endif
 
   // fill vector of hits in each layer
-  for (const auto& track : simTracks_) {
-    for (const auto& hit : track.hitsVector()) {
-      layerHits_[hit.layer()].push_back(hit);
+  for (int itrack = 0; itrack < nTracks; ++itrack) {
+    for (int ilay = 0; ilay < simHits_[itrack].size(); ++ilay) {
+      simHitIdxs_[itrack].push_back(layerHits_[ilay].size());
+      simTracks_[itrack].addHitIdx(layerHits_[ilay].size(),0.);
+      layerHits_[ilay].push_back(simHits_[itrack][ilay]);
     }
   }
-  validation_.fillSimHists(simTracks_);
+  validation_.fillSimHists(simTracks_, simHits_);
 }
 
 void Event::Segment()
@@ -174,7 +188,7 @@ void Event::Seed()
   //create seeds (from sim tracks for now)
   for (unsigned int itrack=0;itrack<simTracks_.size();++itrack) {
     const Track& trk = simTracks_[itrack];
-    const HitVec& hits = trk.hitsVector();
+    const HitVec& hits = simHits_[itrack];
     TrackState updatedState = trk.state();
     HitVec seedhits;
 
@@ -190,7 +204,7 @@ void Event::Seed()
       updatedState = updateParameters(propState, measState);
       seedhits.push_back(seed_hit);//fixme chi2
     }
-    Track seed(updatedState,seedhits,0.);//fixme chi2
+    Track seed(updatedState,0.,-1,Config::nlayers_per_seed,&simHitIdxs_[itrack][0]);//fixme chi2
     seedTracks_.push_back(seed);
   }
 #else
@@ -260,7 +274,7 @@ void Event::Find()
   // From CHEP-2015
   // buildTestSerial(*this, Config::nlayers_per_seed, Config::maxCand, Config::chi2Cut, Config::nSigma, Config::minDPhi);
 
-  validation_.fillAssociationHists(candidateTracks_,simTracks_);
+  validation_.fillAssociationHists(candidateTracks_,simTracks_,layerHits_);
   validation_.fillCandidateHists(candidateTracks_);
 }
 

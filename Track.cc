@@ -1,15 +1,15 @@
 #include "Track.h"
 
 // find the simtrack that provided the most hits
-SimTkIDInfo Track::SimTrackIDInfo() const
+SimTkIDInfo Track::SimTrackIDInfo(const std::vector<HitVec>& globalHitVec) const
 {
-  if (hits_.size() == 0){
+  if (nGoodHitIdx_ == 0){
     return SimTkIDInfo(0,0);
   }
 
   std::vector<unsigned int> mctrack;
-  for (auto&& ihit : hits_){
-    mctrack.push_back(ihit.mcTrackID());
+  for (int ihit = 0; ihit <= hitIdxPos_ ; ++ihit){
+    mctrack.push_back( globalHitVec[ihit][ hitIdxArr_[ihit] ].mcTrackID() );
   }
   std::sort(mctrack.begin(), mctrack.end()); // ensures all elements are checked properly
 
@@ -24,6 +24,7 @@ SimTkIDInfo Track::SimTrackIDInfo() const
   return SimTkIDInfo (mtrk,mcount);
 }
 
+/*
 void Track::write_out(FILE *fp)
 {
   Track t = clone_for_io();
@@ -45,3 +46,4 @@ void Track::read_in(FILE *fp)
   hits_.resize(nh);
   fread(&hits_[0], sizeof(Hit), nh, fp);
 }
+*/
