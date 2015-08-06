@@ -72,7 +72,7 @@ void MkFitter::InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end
     Err[iC].CopyIn(itrack, trk.errors().Array());
     Par[iC].CopyIn(itrack, trk.parameters().Array());
 
-    Chg(itrack, 0, 0) = trk.charge();
+    Chg (itrack, 0, 0) = trk.charge();
     Chi2(itrack, 0, 0) = trk.chi2();
 
     for (int hi = 0; hi < Nhits; ++hi)
@@ -121,7 +121,7 @@ int MkFitter::countValidHits(int itrack)
   int result = 0;
   for (int hi = 0; hi < Nhits; ++hi)
     {
-      if (HitsIdx[hi](itrack, 0, 0)>=0) result++;
+      if (HitsIdx[hi](itrack, 0, 0) >= 0) result++;
     }
   return result;
 }
@@ -131,7 +131,7 @@ int MkFitter::countInvalidHits(int itrack)
   int result = 0;
   for (int hi = 0; hi < Nhits; ++hi)
     {
-      if (HitsIdx[hi](itrack, 0, 0)<0) result++;
+      if (HitsIdx[hi](itrack, 0, 0) < 0) result++;
     }
   return result;
 }
@@ -240,8 +240,8 @@ void MkFitter::OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, in
       msErr[hi].CopyOut(itrack, hit.error_nc().Array());
       msPar[hi].CopyOut(itrack, hit.parameters_nc().Array());
 
-      tracks[i].addHit(hit,0.);
-      tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);
+      tracks[i].addHit(hit, 0.);
+      tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0), 0.);
     }
   }
 }
@@ -1147,9 +1147,9 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 	    IdxChi2List tmpList;
 	    tmpList.trkIdx = CandIdx(itrack, 0, 0);
 	    tmpList.hitIdx = XHitBegin.At(itrack, 0, 0) + hit_cnt;
-	    tmpList.nhits = countValidHits(itrack)+1;
-	    tmpList.chi2 = Chi2(itrack, 0, 0)+chi2;
-            cloner.add_cand(SeedIdx(itrack, 0, 0)-offset, tmpList);
+	    tmpList.nhits  = countValidHits(itrack) + 1;
+	    tmpList.chi2   = Chi2(itrack, 0, 0) + chi2;
+            cloner.add_cand(SeedIdx(itrack, 0, 0) - offset, tmpList);
 	    // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
 	    std::cout << "adding hit with hit_cnt=" << hit_cnt << " for trkIdx=" << tmpList.trkIdx << std::endl;
@@ -1170,9 +1170,9 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
       IdxChi2List tmpList;
       tmpList.trkIdx = CandIdx(itrack, 0, 0);
       tmpList.hitIdx = -1;
-      tmpList.nhits = countValidHits(itrack);
-      tmpList.chi2 = Chi2(itrack, 0, 0);
-      cloner.add_cand(SeedIdx(itrack, 0, 0)-offset, tmpList);
+      tmpList.nhits  = countValidHits(itrack);
+      tmpList.chi2   = Chi2(itrack, 0, 0);
+      cloner.add_cand(SeedIdx(itrack, 0, 0) - offset, tmpList);
       // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
 #ifdef DEBUG
       std::cout << "adding invalid hit" << std::endl;
@@ -1223,7 +1223,7 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
 #pragma simd
   for (int i = beg; i < end; ++i, ++itrack)
     {
-      if ( idxs[i].second.hitIdx<0 ) continue;
+      if (idxs[i].second.hitIdx < 0) continue;
       Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
       msErr[Nhits].CopyIn(itrack, hit.error().Array());
       msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
@@ -1243,12 +1243,12 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
       newcand.setChi2(idxs[i].second.chi2);
       for (int hi = 0; hi < Nhits; ++hi)
 	{
-	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0), 0.);//this should be ok since we already set the chi2 above
 	}
-      newcand.addHitIdx(idxs[i].second.hitIdx,0.);
+      newcand.addHitIdx(idxs[i].second.hitIdx, 0.);
       newcand.setLabel(Label(itrack, 0, 0));
       //set the track state to the updated parameters
-      if ( idxs[i].second.hitIdx<0 ) {
+      if (idxs[i].second.hitIdx < 0) {
 	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
 	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
       } else {
@@ -1258,7 +1258,7 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
 #ifdef DEBUG
       std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
 #endif
-	  
+
       cands_for_next_lay[SeedIdx(itrack, 0, 0) - offset].push_back(newcand);
     }
 }

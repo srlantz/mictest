@@ -94,12 +94,12 @@ public:
   const HitVec& hitsVector() const {return hits_;}
   const HitVec& initHitsVector() const {return initHits_;}
 
-  void addHit(const Hit& hit,float chi2) {hits_.push_back(hit);chi2_+=chi2;}
-  void addHitIdx(int hitIdx,float chi2)
+  void addHit(const Hit& hit,float chi2) { hits_.push_back(hit); chi2_ += chi2; }
+  void addHitIdx(int hitIdx, float chi2)
   {
     // hitIdxVec_.push_back(hitIdx);
     hitIdxArr_[++hitIdxPos_] = hitIdx;
-    if (hitIdx>=0) ++nGoodHitIdx_; chi2_+=chi2;
+    if (hitIdx >= 0) ++nGoodHitIdx_; chi2_+=chi2;
   }
 
   int  getHitIdx(int posHitIdx) const
