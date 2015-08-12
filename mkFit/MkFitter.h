@@ -86,8 +86,10 @@ public:
 
   void SetNhits(int newnhits) { Nhits=newnhits; }
 
-  int countInvalidHits(int itrack);
-  int countValidHits(int itrack);
+  int countValidHits  (int itrack, int end_hit);
+  int countInvalidHits(int itrack, int end_hit);
+  int countValidHits  (int itrack) { countValidHits  (itrack, Nhits); }
+  int countInvalidHits(int itrack) { countInvalidHits(itrack, Nhits); }
 
   float getPar(int itrack, int i, int par) { return Par[i].ConstAt(itrack, 0, par); }
 

@@ -24,7 +24,9 @@ void MkFitter::PrintPt(int idx)
 
 //==============================================================================
 
-void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec>& layerHits, int beg, int end)
+void MkFitter::InputTracksAndHits(std::vector<Track>&  tracks,
+                                  std::vector<HitVec>& layerHits,
+                                  int beg, int end)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -46,10 +48,12 @@ void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-      const Hit &hit = layerHits[hi][trk.getHitIdx(hi)];
+      const int hidx = trk.getHitIdx(hi);
+      const Hit &hit = layerHits[hi][hidx];
 
       msErr[hi].CopyIn(itrack, hit.errArray());
       msPar[hi].CopyIn(itrack, hit.posArray());
+      HitsIdx[hi](itrack, 0, 0) = hidx;
     }
   }
 }
@@ -116,20 +120,20 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
   }
 }
 
-int MkFitter::countValidHits(int itrack)
+int MkFitter::countValidHits(int itrack, int end_hit)
 {
   int result = 0;
-  for (int hi = 0; hi < Nhits; ++hi)
+  for (int hi = 0; hi < end_hit; ++hi)
     {
       if (HitsIdx[hi](itrack, 0, 0) >= 0) result++;
     }
   return result;
 }
 
-int MkFitter::countInvalidHits(int itrack)
+int MkFitter::countInvalidHits(int itrack, int end_hit)
 {
   int result = 0;
-  for (int hi = 0; hi < Nhits; ++hi)
+  for (int hi = 0; hi < end_hit; ++hi)
     {
       if (HitsIdx[hi](itrack, 0, 0) < 0) result++;
     }
@@ -237,7 +241,6 @@ void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, 
     {
       tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);
     }
-
   }
 }
 
@@ -1095,7 +1098,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
     //now compute the chi2 of track state vs hit
     MPlexQF outChi2;
-    computeChi2MPlex(Err[iP], Par[iP],msErr[Nhits], msPar[Nhits], outChi2);
+    computeChi2MPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], outChi2);
 
     // Prefetch to L1 the hits we'll process in the next loop iteration.
     for (int itrack = 0; itrack < NN; ++itrack)
@@ -1134,7 +1137,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 #ifdef DEBUG
       std::cout << "countInvalidHits(itrack)=" << countInvalidHits(itrack) << std::endl;
 #endif
-      if (countInvalidHits(itrack)>0) continue;//check this is ok for vectorization //fixme not optimal
+      if (countInvalidHits(itrack) > 0) continue;//check this is ok for vectorization //fixme not optimal
       IdxChi2List tmpList;
       tmpList.trkIdx = CandIdx(itrack, 0, 0);
       tmpList.hitIdx = -1;
