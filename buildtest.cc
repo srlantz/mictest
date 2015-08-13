@@ -331,8 +331,8 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
       if ((chi2<Config::chi2Cut)&&(chi2>0.)) {//fixme 
         dprint("found hit with index: " << *index_iter << " chi2=" << chi2);
         const TrackState tmpUpdatedState = updateParameters(propState, hitMeas);
-        Track tmpCand(tmpUpdatedState,tkcand.hitsVector(),tkcand.chi2()); //= tkcand.clone();
-        tmpCand.addHit(hitCand,chi2);
+        Track tmpCand(tmpUpdatedState,tkcand.hitIDs(),tkcand.chi2()); //= tkcand.clone();
+        tmpCand.addHit(HitID(ilayer, *index_iter),chi2);
         tmp_candidates.push_back(tmpCand);
       }
     }//end of consider hits on layer loop

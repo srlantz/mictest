@@ -9,6 +9,33 @@
 #include "tbb/tbb.h"
 #endif
 
+// find the simtrack that provided the most hits
+SimTkIDInfo Event::SimTrackIDInfo(const Track& trk) const
+{
+  const auto& hitids = trk.hitIDs();
+
+  if (hitids.size() == 0){
+    return SimTkIDInfo(0,0);
+  }
+
+  std::vector<unsigned int> mctrack;
+  for (auto&& ihit : hitids){
+    auto&& mchit = MCHitFromHitID(ihit);
+    mctrack.push_back(mchit.mcTrackID());
+  }
+  std::sort(mctrack.begin(), mctrack.end()); // ensures all elements are checked properly
+
+  auto mtrk(mctrack[0]), mcount(0U), m(mctrack[0]), c(0U);
+
+  for (auto i : mctrack) {
+    if (i == m) { ++c; } else { c = 0; }
+    if (c >= mcount) { mtrk = m; mcount = c; }
+    m = i;
+  }
+
+  return SimTkIDInfo(mtrk,mcount);
+}
+
 static bool sortByPhi(const Hit& hit1, const Hit& hit2)
 {
   return hit1.phi()<hit2.phi();
@@ -33,18 +60,25 @@ static bool sortByZ(const Hit& hit1, const Hit& hit2){
 
 Event::Event(const Geometry& g, Validation& v, int threads) : geom_(g), validation_(v), threads_(threads)
 {
+  MCHit::mcHitIDCounter_ = 0;
   layerHits_.resize(geom_.CountLayers());
+  minR_.resize(geom_.CountLayers());
+  maxR_.resize(geom_.CountLayers());
   segmentMap_.resize(geom_.CountLayers());
+  for (auto ilay = 0U; ilay < geom_.CountLayers(); ++ilay) {
+    minR_[ilay] = maxR_[ilay] = geom_.Radius(ilay);
+  }
 }
 
 void Event::Simulate(unsigned int nTracks)
 {
   simTracks_.resize(nTracks);
   for (auto&& l : layerHits_) {
-    l.reserve(nTracks);
+    l.resize(nTracks);
   }
+  mcHits_.resize(geom_.CountLayers()*nTracks);
 
-#ifdef TBB
+#if defined(TBB)
   parallel_for( tbb::blocked_range<size_t>(0, nTracks, 100), 
       [&](const tbb::blocked_range<size_t>& itracks) {
 
@@ -58,113 +92,73 @@ void Event::Simulate(unsigned int nTracks)
       SVector3 pos;
       SVector3 mom;
       SMatrixSym66 covtrk;
-      HitVec hits, initialhits;
+      HitVec hits;
+      MCHitVec mchits;
       // unsigned int starting_layer  = 0; --> for displaced tracks, may want to consider running a separate Simulate() block with extra parameters
 
       int q=0;//set it in setup function
       float pt = 0.5+g_unif(g_gen)*9.5;//this input, 0.5<pt<10 GeV (below ~0.5 GeV does not make 10 layers)
-      setupTrackByToyMC(pos,mom,covtrk,hits,itrack,q,pt,tmpgeom,initialhits);
-      Track sim_track(q,pos,mom,covtrk,hits,0,initialhits);
-      simTracks_[itrack] = sim_track;
+      setupTrackByToyMC(itrack,pt,pos,mom,covtrk,mchits,hits,q,tmpgeom);
+      for (auto ihit = 0U; ihit < hits.size(); ++ihit) {
+        const auto& hit = hits[ihit];
+        auto ilay = mchits[ihit].layer();
+        layerHits_[ilay][itrack] = hit;
+        auto r = hit.r();
+        if (r < minR_[ilay]) minR_[ilay] = r;
+        if (r > maxR_[ilay]) maxR_[ilay] = r;
+      }
+      HitIDVec hitids;
+      for (auto&& hit : mchits) {
+        mcHits_[hit.mcHitID()] = hit;
+        hitids.push_back(hit.mcHitID());
+      }
+      simTracks_[itrack] = Track(q,pos,mom,covtrk,hitids,0.0);
     }
-#ifdef TBB
+#if defined(TBB)
   });
 #endif
+  validation_.fillSimHists(simTracks_, mcHits_);
+}
 
-  // fill vector of hits in each layer
-  for (const auto& track : simTracks_) {
-    for (const auto& hit : track.hitsVector()) {
-      layerHits_[hit.layer()].push_back(hit);
+template<typename Container, typename Counter>
+void partition_sort(Container& c, Counter& count, unsigned int maxKey) {
+  std::vector<Container> buckets (maxKey);
+
+  for (auto&& ele : c) {
+    const auto bin = ele.binIndex();
+    buckets[bin].push_back(ele);
+    ++count[bin];
+  }
+  auto i(0U);
+  for (auto&& b : buckets) {
+    for (auto&& e : b) {
+      c[i++] = e;
     }
   }
-  validation_.fillSimHists(simTracks_);
 }
 
 void Event::Segment()
 {
-#ifdef DEBUG
-  bool debug=true;
-#endif
-  //sort in phi and dump hits per layer, fill phi partitioning
   for (unsigned int ilayer=0; ilayer<layerHits_.size(); ++ilayer) {
-    dprint("Hits in layer=" << ilayer);
-    
-#ifdef ETASEG
-    segmentMap_[ilayer].resize(Config::nEtaPart);    
-    // eta first then phi
-    std::sort(layerHits_[ilayer].begin(), layerHits_[ilayer].end(), sortByZ);
-    std::vector<unsigned int> lay_eta_bin_count(Config::nEtaPart);
-    for (unsigned int ihit=0;ihit<layerHits_[ilayer].size();++ihit) {
-      unsigned int etabin = getEtaPartition(layerHits_[ilayer][ihit].eta(),etaDet);
-      dprint("ihit: " << ihit << " eta: " << layerHits_[ilayer][ihit].eta() << " etabin: " << etabin);
-      lay_eta_bin_count[etabin]++;
-    }
-    //now set index and size in partitioning map and then sort the bin by phi
-    
-    int lastEtaIdxFound = -1;
-    int lastPhiIdxFound = -1;
 
-    for (unsigned int etabin=0; etabin<Config::nEtaPart; ++etabin) {
-      unsigned int firstEtaBinIdx = lastEtaIdxFound+1;
-      unsigned int etaBinSize = lay_eta_bin_count[etabin];
-      if (etaBinSize>0){
-        lastEtaIdxFound+=etaBinSize;
-      }
+    std::vector<int> hitsinseg(Config::nPhiPart*Config::nEtaPart);
+    partition_sort(layerHits_[ilayer], hitsinseg, Config::nPhiPart*Config::nEtaPart);
 
-      //sort by phi in each "eta bin"
-      std::sort(layerHits_[ilayer].begin() + firstEtaBinIdx,layerHits_[ilayer].begin() + (etaBinSize+firstEtaBinIdx), sortByPhi); // sort from first to last in eta
-      std::vector<unsigned int> lay_eta_phi_bin_count(Config::nPhiPart);
-
-      for(unsigned int ihit = firstEtaBinIdx; ihit < etaBinSize+firstEtaBinIdx; ++ihit){
-        dprint("ihit: " << ihit << " r(layer): " << layerHits_[ilayer][ihit].r() << "(" << ilayer << ") phi: " 
-                        << layerHits_[ilayer][ihit].phi() << " phipart: " << getPhiPartition(layerHits_[ilayer][ihit].phi()) << " eta: "
-                        << layerHits_[ilayer][ihit].eta() << " etapart: " << getEtaPartition(layerHits_[ilayer][ihit].eta(),etaDet));
-        unsigned int phibin = getPhiPartition(layerHits_[ilayer][ihit].phi());
-        lay_eta_phi_bin_count[phibin]++;
-      }
-
-      for (unsigned int phibin=0; phibin<Config::nPhiPart; ++phibin) {
-        unsigned int firstPhiBinIdx = lastPhiIdxFound+1;
-        unsigned int phiBinSize = lay_eta_phi_bin_count[phibin];
-        BinInfo phiBinInfo(firstPhiBinIdx,phiBinSize);
-        segmentMap_[ilayer][etabin].push_back(phiBinInfo);
-        if (phiBinSize>0){
-          lastPhiIdxFound+=phiBinSize;
-        }
-#ifdef DEBUG
-        if ((debug) && (phiBinSize !=0)) printf("ilayer: %1u etabin: %1u phibin: %2u first: %2u last: %2u \n", 
-                                                ilayer, etabin, phibin, 
-                                                segmentMap_[ilayer][etabin][phibin].first, 
-                                                segmentMap_[ilayer][etabin][phibin].second+segmentMap_[ilayer][etabin][phibin].first
-                                                );
-#endif
-      } // end loop over storing phi index
-    } // end loop over storing eta index
-#else
-    segmentMap_[ilayer].resize(1);    // only one eta bin for special case, avoid ifdefs
-    std::sort(layerHits_[ilayer].begin(), layerHits_[ilayer].end(), sortByPhi);
-    std::vector<unsigned int> lay_phi_bin_count(Config::nPhiPart);//should it be 63? - yes!
-    for (unsigned int ihit=0;ihit<layerHits_[ilayer].size();++ihit) {
-      dprint("hit r/phi/eta : " << layerHits_[ilayer][ihit].r() << " "
-                                << layerHits_[ilayer][ihit].phi() << " " << layerHits_[ilayer][ihit].eta());
-
-      unsigned int phibin = getPhiPartition(layerHits_[ilayer][ihit].phi());
-      lay_phi_bin_count[phibin]++;
-    }
-
-    //now set index and size in partitioning map
-    int lastIdxFound = -1;
-    for (unsigned int bin=0; bin<Config::nPhiPart; ++bin) {
-      unsigned int binSize = lay_phi_bin_count[bin];
-      unsigned int firstBinIdx = lastIdxFound+1;
-      BinInfo binInfo(firstBinIdx, binSize);
-      segmentMap_[ilayer][0].push_back(binInfo); // [0] bin is just the only eta bin ... reduce ifdefs
-      if (binSize>0){
-        lastIdxFound+=binSize;
+    BinInfo cbin(0,0);
+    segmentMap_[ilayer].resize(Config::nEtaPart);
+    for (auto ieta = 0U; ieta < Config::nEtaPart; ++ieta) {
+      segmentMap_[ilayer][ieta].resize(Config::nPhiPart);
+      for (auto iphi = 0U; iphi < Config::nPhiPart; ++iphi) {
+        cbin.second = hitsinseg[binNumber(ieta, iphi)];
+        segmentMap_[ilayer][ieta][iphi] = cbin;
+        cbin.first += cbin.second;
       }
     }
-#endif
-  } // end loop over layers
+    for (auto ihit = 0U; ihit < layerHits_[ilayer].size(); ++ihit) {
+      auto mcid = layerHits_[ilayer][ihit].mcHitID();
+      mcHits_[mcid].setHitID(HitID(ilayer, ihit));
+    }
+  }
 }
 
 void Event::Seed()
@@ -174,12 +168,12 @@ void Event::Seed()
   //create seeds (from sim tracks for now)
   for (unsigned int itrack=0;itrack<simTracks_.size();++itrack) {
     const Track& trk = simTracks_[itrack];
-    const HitVec& hits = trk.hitsVector();
+    const auto& simhitids = trk.hitIDs();
     TrackState updatedState = trk.state();
-    HitVec seedhits;
+    HitIDVec seedhits;
 
     for (auto ilayer=0U;ilayer<Config::nlayers_per_seed;++ilayer) {//seeds have first three layers as seeds
-      Hit seed_hit = hits[ilayer]; // do this for now to make initHits element number line up with HitId number
+      const auto& seed_hit = HitFromMCID(simhitids[ilayer]);
       TrackState propState = propagateHelixToR(updatedState,seed_hit.r());
 #ifdef CHECKSTATEVALID
       if (!propState.valid) {
@@ -188,7 +182,7 @@ void Event::Seed()
 #endif
       MeasurementState measState = seed_hit.measurementState();
       updatedState = updateParameters(propState, measState);
-      seedhits.push_back(seed_hit);//fixme chi2
+      seedhits.push_back(HitIDFromMCID(simhitids[ilayer]));
     }
     Track seed(updatedState,seedhits,0.);//fixme chi2
     seedTracks_.push_back(seed);
@@ -260,7 +254,7 @@ void Event::Find()
   // From CHEP-2015
   // buildTestSerial(*this, Config::nlayers_per_seed, Config::maxCand, Config::chi2Cut, Config::nSigma, Config::minDPhi);
 
-  validation_.fillAssociationHists(candidateTracks_,simTracks_);
+  validation_.fillAssociationHists(*this);
   validation_.fillCandidateHists(candidateTracks_);
 }
 

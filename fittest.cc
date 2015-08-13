@@ -57,16 +57,17 @@ void fitTrack(const Track& trk, const Event& ev)
 
 #define INWARD
 #if defined(INWARD)
-  auto hits(trk.hitsVector());
-  std::reverse(hits.begin(), hits.end());
+  auto hitids(trk.hitIDs());
+  std::reverse(hitids.begin(), hitids.end());
 #else
-  const auto& hits = trk.hitsVector();
+  const auto& hitids = trk.hitIDs();
 #endif
-  unsigned int itrack0 = trk.SimTrackIDInfo().first;
+  unsigned int itrack0 = ev.SimTrackIDInfo(trk).first;
   Track trk0 = ev.simTracks_[itrack0];
   TrackState simState = trk0.state();
 
-  TrackState simStateHit0 = propagateHelixToR(simState,hits[0].r()); // first hit
+  const auto& hit0(ev.HitFromID(hitids[0]));
+  TrackState simStateHit0 = propagateHelixToR(simState,hit0.r()); // first hit
   TrackState cfitStateHit0;
 
 //#define CONFORMAL
@@ -80,7 +81,7 @@ void fitTrack(const Track& trk, const Event& ev)
   TrackState updatedState = cfitStateHit0;
 #else 
   TrackState updatedState = trk.state();
-  updatedState = propagateHelixToR(updatedState,hits[0].r());
+  updatedState = propagateHelixToR(updatedState,hit0.r());
 #endif 
 
 #if defined(ENDTOEND) || defined(CONFORMAL)
@@ -99,7 +100,8 @@ void fitTrack(const Track& trk, const Event& ev)
   }      
 #endif
 
-  for (auto&& hit : hits) {
+  for (auto&& hitid : hitids) {
+    const auto& hit(ev.HitFromID(hitid));
     //for each hit, propagate to hit radius and update track state with hit measurement
     MeasurementState measState = hit.measurementState();
  
@@ -134,9 +136,8 @@ void fitTrack(const Track& trk, const Event& ev)
 #endif
     }
 
-    const HitVec& mcInitHitVec = ev.simTracks_[hit.mcTrackID()].initHitsVector();
-    const auto hitid = hit.hitID();
-    ev.validation_.fillFitHitHists(hitid, mcInitHitVec, measState, propState, updatedState);
+    const auto& mchit = ev.MCHitFromHit(hit);
+    ev.validation_.fillFitHitHists(mchit.measurementState(), measState, propState, updatedState);
   } // end loop over hits
   dcall(print("Fit Track", updatedState));
   ev.validation_.fillFitTrackHists(simState, updatedState);

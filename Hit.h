@@ -2,14 +2,16 @@
 #define _hit_
 
 #include <cmath>
+#include <climits>
+#include <cstdint>
 
 #include "Matrix.h"
 #include <atomic>
 
 namespace Config
 {
-  static const float    PI = 3.14159265358979323846;
-  static const float TwoPI = 6.28318530717958647692;
+  static constexpr float    PI = 3.14159265358979323846;
+  static constexpr float TwoPI = 6.28318530717958647692;
   
   static constexpr const int   nPhiPart   = 80; // 63;
   static constexpr const float nPhiFactor = nPhiPart / TwoPI;
@@ -25,68 +27,63 @@ namespace Config
   static const float fEtaFacB1 = nEtaPart / fEtaFull;
   static const float fEtaOffB2 = fEtaDet - fEtaFull / (2 * nEtaPart);
   static const float fEtaFacB2 = (nEtaPart - 1) / (fEtaFull - fEtaFull / nEtaPart);
-
-  // This is for extra bins narrower ... thinking about this some more it
-  // seems it would be even better to have two more exta bins, hanging off at
-  // both ends.
-  //
-  // Anyway, it doesn't matter ... as with wide vertex region this eta binning
-  // won't make much sense -- will have to be done differently for different
-  // track orgin hypotheses. In about a year or so.
-
-  inline int getEtaBin(float eta)
-  {
-
-    //in this case we are out of bounds
-    if (fabs(eta)>fEtaDet) return -1;
-
-    //first and last bin have extra width
-    if (eta<(lEtaBin-fEtaDet)) return 0;
-    if (eta>(fEtaDet-lEtaBin)) return nEtaBin-1;
-
-    //now we can treat all bins as if they had same size
-    return int( (eta+fEtaDet-lEtaBin/2.)/lEtaBin );
-
-  }
-
-  inline int getBothEtaBins(float eta, int& b1, int& b2)
-  {
-    b1 = b2 = -1;
-
-    if (eta < -fEtaDet || eta > fEtaDet)
-    {
-      return 0;
-    }
-
-    int b1p = std::floor((eta + fEtaOffB1) * fEtaFacB1);
-    int b2p = std::floor((eta + fEtaOffB2) * fEtaFacB2);
-
-    // printf("b1' = %d   b2' = %d\n", b1p, b2p);
-
-    int cnt = 0;
-    if (b1p >= 0 && b1p < nEtaPart)
-    {
-      b1 = 2 * b1p;
-      ++cnt;
-    }
-    if (b2p >= 0 && b2p < nEtaPart - 1)
-    {
-      b2 = 2 * b2p + 1;
-      ++cnt;
-    }
-
-    // printf("b1  = %d   b2  = %d\n", b1, b2);
-
-    return cnt;
-  }
 };
 
-class HitsOnLayer
+// This is for extra bins narrower ... thinking about this some more it
+// seems it would be even better to have two more exta bins, hanging off at
+// both ends.
+//
+// Anyway, it doesn't matter ... as with wide vertex region this eta binning
+// won't make much sense -- will have to be done differently for different
+// track orgin hypotheses. In about a year or so.
+
+inline int getEtaBin(float eta)
 {
-  
-public:
-};
+  using namespace Config;
 
+  //in this case we are out of bounds
+  if (fabs(eta)>fEtaDet) return -1;
+
+  //first and last bin have extra width
+  if (eta<(lEtaBin-fEtaDet)) return 0;
+  if (eta>(fEtaDet-lEtaBin)) return nEtaBin-1;
+
+  //now we can treat all bins as if they had same size
+  return int( (eta+fEtaDet-lEtaBin/2.)/lEtaBin );
+}
+
+inline int getBothEtaBins(float eta, int& b1, int& b2)
+{
+  using namespace Config;
+
+  b1 = b2 = -1;
+
+  if (eta < -fEtaDet || eta > fEtaDet)
+  {
+    return 0;
+  }
+
+  int b1p = std::floor((eta + fEtaOffB1) * fEtaFacB1);
+  int b2p = std::floor((eta + fEtaOffB2) * fEtaFacB2);
+
+  // printf("b1' = %d   b2' = %d\n", b1p, b2p);
+
+  int cnt = 0;
+  if (b1p >= 0 && b1p < nEtaPart)
+  {
+    b1 = 2 * b1p;
+    ++cnt;
+  }
+  if (b2p >= 0 && b2p < nEtaPart - 1)
+  {
+    b2 = 2 * b2p + 1;
+    ++cnt;
+  }
+
+  // printf("b1  = %d   b2  = %d\n", b1, b2);
+
+  return cnt;
+}
 
 inline int getPhiPartition(float phi)
 {
@@ -97,7 +94,7 @@ inline int getPhiPartition(float phi)
   return bin;
 }
 
-inline int getEtaPartition(float eta, float etaDet)
+inline int getEtaPartition(float eta, float etaDet = Config::fEtaFull)
 {
   float etaPlusEtaDet  = eta + etaDet;
   float twiceEtaDet    = 2.0 * etaDet;
@@ -121,24 +118,30 @@ inline float getHypot(float x, float y)
   return sqrtf(x*x + y*y);
 }
 
-
-struct MCHitInfo
+inline unsigned int binNumber(unsigned int etaPart, unsigned int phiPart)
 {
-  MCHitInfo() : mcHitID_(mcHitIDCounter_++) {}
-  MCHitInfo(int track, int layer, int ithlayerhit)
-    : mcTrackID_(track), layer_(layer), ithLayerHit_(ithlayerhit), mcHitID_(++mcHitIDCounter_) {}
+ return Config::nPhiPart*etaPart + phiPart;
+}
 
-  int mcTrackID_;
-  int layer_;
-  int ithLayerHit_;
-  int mcHitID_;
-
-  static std::atomic<unsigned int> mcHitIDCounter_;
+struct HitID {
+  HitID() : layer_(0), index_(0) {}
+  static constexpr unsigned int MCLayerID = UINT32_MAX;
+  HitID(unsigned int layer, unsigned int index) : layer_(layer), index_(index) {}
+  HitID(unsigned int index) : layer_(MCLayerID), index_(index) {}
+  uint32_t layer_;
+  uint32_t index_;
 };
+
+inline bool operator==(const HitID& a, const HitID& b) {
+  return a.layer_ == b.layer_ && a.index_ == b.index_;
+}
 
 struct MeasurementState
 {
 public:
+  MeasurementState() {}
+  MeasurementState(const SVector3& p, const SMatrixSym33& e)
+    : parameters(p), errors(e) {}
   SVector3 parameters;
   SMatrixSym33 errors;
 };
@@ -146,31 +149,12 @@ public:
 class Hit
 {
 public:
-  Hit(){}
-
+  Hit() {}
   Hit(const MeasurementState& state) : state_(state) {}
-
   Hit(const SVector3& position, const SMatrixSym33& error)
-  {
-    state_.parameters=position;
-    state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, int itrack, int ilayer, int ithLayerHit)
-  {
-    mcHitInfo_.mcTrackID_ = itrack;
-    mcHitInfo_.layer_ = ilayer;
-    mcHitInfo_.ithLayerHit_ = ithLayerHit;
-    state_.parameters=position;
-    state_.errors=error;
-  }
-
-  Hit(const SVector3& position, const SMatrixSym33& error, const MCHitInfo& mcHitInfo)
-    : mcHitInfo_(mcHitInfo)
-  {
-    state_.parameters=position;
-    state_.errors=error;
-  }
+    : state_(position, error) {}
+  Hit(const SVector3& position, const SMatrixSym33& error, int mcHitID)
+    : state_(position, error), mcHitID_(mcHitID) {}
 
   ~Hit(){}
 
@@ -201,22 +185,40 @@ public:
   float eta() const {
     return getEta(state_.parameters.At(0), state_.parameters.At(1), state_.parameters.At(2));
   }
-
+  int phiPart() const { return getPhiPartition(phi()); }
+  int etaPart() const { return getEtaPartition(eta()); }
+  int binIndex() const { return binNumber(etaPart(), phiPart()); }
   const MeasurementState& measurementState() const {
     return state_;
   }
-
-  const MCHitInfo& mcHitInfo() const {return mcHitInfo_;}
-  int mcTrackID() const {return mcHitInfo_.mcTrackID_;}
-  int layer() const {return mcHitInfo_.layer_;}
-  int ithLayerHit() const {return mcHitInfo_.ithLayerHit_;}
-  int hitID() const {return mcHitInfo_.mcHitID_;}
+  int mcHitID() const { return mcHitID_; }
+  void setMCHitID(int id) { mcHitID_ = id; }
 
 private:
   MeasurementState state_;
-  MCHitInfo        mcHitInfo_;
+  int mcHitID_;
+};
+
+struct MCHit : public Hit
+{
+  MCHit() {}
+  MCHit(const Hit& hit, int track, int layer, int ithlayerhit)
+    : Hit(hit), mcTrackID_(track), layer_(layer), ithLayerHit_(ithlayerhit)
+      { setMCHitID(mcHitIDCounter_++); }
+  int layer() const { return layer_; }
+  HitID hitID() const { return hitID_; }
+  void setHitID(HitID hitID) { hitID_ = hitID; }
+  int mcTrackID() const { return mcTrackID_; }
+
+  int mcTrackID_;
+  int layer_;
+  int ithLayerHit_;
+  HitID hitID_;
+  static std::atomic<unsigned int> mcHitIDCounter_;
 };
 
 typedef std::vector<Hit> HitVec;
+typedef std::vector<MCHit> MCHitVec;
+typedef std::vector<HitID> HitIDVec;
 
 #endif

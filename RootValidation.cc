@@ -1,5 +1,6 @@
-#include "RootValidation.h"
 #ifndef NO_ROOT
+#include "RootValidation.h"
+#include "Event.h"
 
 float getPt(float px, float py) { return sqrt(px*px + py*py); }
 float deltaPhi(float phi1, float phi2) {
@@ -98,7 +99,7 @@ RootValidation::RootValidation(std::string fileName, bool saveTree)
   }
 }
 
-void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks)
+void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks, const MCHitVec& hitvec)
 {
   // these are expensive, only do once per track
   std::vector<float> phi;
@@ -117,8 +118,9 @@ void RootValidation::fillSimHists(const TrackVec& evt_sim_tracks)
     validation_hists_["gen_trk_phi"]->Fill( phi[isim_track] );
     validation_hists_["gen_trk_eta"]->Fill( eta[isim_track] );
     
-    const HitVec& hits = evt_sim_tracks[isim_track].hitsVector();
-    for (auto&& hit : hits){
+    const auto& hitids = evt_sim_tracks[isim_track].hitIDs();
+    for (auto&& hitid : hitids){
+      const auto& hit = hitvec.at(hitid.index_);
       float rad = sqrt(hit.position()[0]*hit.position()[0] + hit.position()[1]*hit.position()[1]);
       validation_hists_["gen_hits_rad"]->Fill( rad );
       // Fill histo for layer 3
@@ -176,7 +178,10 @@ void RootValidation::fillCandidateHists(const TrackVec& evt_track_candidates)
   }
 }
 
-void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, const TrackVec& evt_sim_tracks){
+void RootValidation::fillAssociationHists(const Event& ev){
+  const auto& evt_track_candidates(ev.candidateTracks_);
+  const auto& evt_sim_tracks(ev.simTracks_);
+
   std::lock_guard<std::mutex> locker(glock_);
   //setup for assocation; these are dense in simIndex, so use a vector
   std::vector<unsigned int> associated_indices_found_RD(evt_sim_tracks.size()); 
@@ -185,7 +190,7 @@ void RootValidation::fillAssociationHists(const TrackVec& evt_track_candidates, 
   for (auto&& tkcand : evt_track_candidates) {
 
     // get sim Index --> matching only simTrackID, not hitIDs... probably not a big deal for loopers/overlap
-    SimTkIDInfo candSimIDInfo = tkcand.SimTrackIDInfo();
+    SimTkIDInfo candSimIDInfo = ev.SimTrackIDInfo(tkcand);
     unsigned int simtrack     = candSimIDInfo.first;
     unsigned int nHitsMatched = candSimIDInfo.second;
 
@@ -305,17 +310,10 @@ void RootValidation::fillFitStateHists(const TrackState& simStateHit0, const Tra
   }
 }
 
-void RootValidation::fillFitHitHists(unsigned int hitid, const HitVec& mcInitHitVec, const MeasurementState& measState, const TrackState& propState, const TrackState& updatedState)
+void RootValidation::fillFitHitHists(const MeasurementState& initMeasState, const MeasurementState& measState, const TrackState& propState, const TrackState& updatedState)
 {
   if (savetree_){
     std::lock_guard<std::mutex> locker(glock_);
-    MeasurementState initMeasState;
-    for (auto&& mchit : mcInitHitVec){
-      if(mchit.hitID() == hitid){
-        initMeasState = mchit.measurementState();
-        break;
-      }
-    }
 
     x_init   = initMeasState.parameters[0];
     x_mc     = measState.parameters[0];

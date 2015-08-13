@@ -6,8 +6,9 @@
 //#define SOLID_SMEAR
 #define SCATTER_XYZ
 
-void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVec& hits, unsigned int itrack,
-                       int& charge, float pt, const Geometry& geom, HitVec& initHits)
+void setupTrackByToyMC(unsigned int itrack, float pt,
+  SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
+  MCHitVec& mcHits, HitVec& hits, int& charge, const Geometry& geom)
 {
 #ifdef DEBUG
   bool debug = false;
@@ -77,7 +78,7 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
   unsigned int simLayer = 0;
 
   hits.reserve(nTotHit);
-  initHits.reserve(nTotHit);
+  mcHits.reserve(nTotHit);
 
   for (unsigned int ihit=0;ihit<nTotHit;++ihit) {  // go to first layer in radius using propagation.h
     //TrackState propState = propagateHelixToR(tmpState,4.*float(ihit+1));//radius of 4*ihit
@@ -292,15 +293,14 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
 #endif
 
     SVector3 initVecXYZ(initX,initY,initZ);
-    Hit initHitXYZ(initVecXYZ,covXYZ,itrack,simLayer,layer_counts[simLayer]); 
-    initHits.push_back(initHitXYZ);
+    MCHit initHitXYZ(Hit(initVecXYZ,covXYZ),itrack,simLayer,layer_counts[simLayer]);
+    mcHits.push_back(initHitXYZ);
 
-    Hit hit1(x1,covXYZ,initHitXYZ.mcHitInfo());
+    Hit hit1(x1,covXYZ,initHitXYZ.mcHitID());
     hits.push_back(hit1);
     tmpState = propState;
 
-    dprint("initHitId: " << initHitXYZ.hitID() << " hit1Id: " << hit1.hitID() <<std::endl
-                         << "ihit: " << ihit << " layer: " << simLayer << " counts: " << layer_counts[simLayer]);
+    dprint("MCHitId: " << initHitXYZ.mcHitID() << "ihit: " << ihit << " layer: " << simLayer << " counts: " << layer_counts[simLayer]);
 
     ++layer_counts[simLayer]; // count the number of times passed into layer
 

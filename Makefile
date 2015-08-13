@@ -8,12 +8,14 @@ ifeq (${CXX},icc)
   EXES   += $(addsuffix -mic, ${TGTS})
 endif
 
-all: ${EXES}
-	cd mkFit && ${MAKE}
+all:: ${EXES}
 
 AUTO_TGTS :=
 
 ifdef USE_MATRIPLEX
+
+all::
+	${MAKE} -C mkFit
 
 auto-matriplex:
 	${MAKE} -C Matriplex auto && touch $@

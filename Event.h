@@ -28,9 +28,52 @@ public:
   void Find();
   void Fit();
 
+  SimTkIDInfo SimTrackIDInfo(const Track& trk) const;
+
+  // from mchitid to hitid
+  const HitID HitIDFromMCID(uint32_t id) const
+  {
+    return mcHits_[id].hitID();
+  }
+  const HitID HitIDFromMCID(HitID id) const
+  {
+    assert(HitID::MCLayerID == id.layer_);
+    return HitIDFromMCID(id.index_);
+  }
+
+  const Hit& HitFromID(HitID id) const
+  {
+    assert(layerHits_.size() > id.layer_);
+    assert(layerHits_[id.layer_].size() > id.index_);
+    return layerHits_[id.layer_][id.index_];
+  }
+
+  const Hit& HitFromMCID(uint32_t id) const
+  {
+    return HitFromID(HitIDFromMCID(id));
+  };
+
+  const Hit& HitFromMCID(HitID id) const
+  {
+    return HitFromID(HitIDFromMCID(id));
+  };
+
+  const MCHit& MCHitFromHitID(HitID id) const
+  {
+    assert(HitID::MCLayerID > id.layer_);
+    return mcHits_[HitFromID(id).mcHitID()];
+  };
+
+  const MCHit& MCHitFromHit(const Hit& hit) const
+  {
+    return mcHits_[hit.mcHitID()];
+  };
+
   const Geometry& geom_;
   Validation& validation_;
   std::vector<HitVec> layerHits_;
+  MCHitVec mcHits_;
+  std::vector<float> minR_, maxR_;
   TrackVec simTracks_, seedTracks_, candidateTracks_;
   int threads_;
 
