@@ -1,4 +1,5 @@
 #include "MkFitter.h"
+#include "CandCloner.h"
 
 #include "PropagationMPlex.h"
 #include "KalmanUtilsMPlex.h"
@@ -244,12 +245,10 @@ void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, 
   }
 }
 
-void MkFitter::PropagateTracksToR(float R)
+void MkFitter::PropagateTracksToR(float R, const int N_proc)
 {
-
     propagateHelixToRMPlex(Err[iC], Par[iC], Chg, R,
-                           Err[iP], Par[iP]);
-
+                           Err[iP], Par[iP], N_proc);
 }
 
 //fixme: do it properly with phi segmentation
@@ -556,7 +555,7 @@ void MkFitter::GetHitRange(std::vector<std::vector<BinInfo> >& segmentMapLay_, i
 // MT methods
 // ======================================================================================
 
-void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
+void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
 {
   // must store hit vector into a data member so it can be used in hit selection.
   // or ... can have it passed into other functions.
@@ -567,7 +566,7 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
 
   // vecorized for
 #pragma simd
-  for (int itrack = 0; itrack < NN; ++itrack)
+  for (int itrack = 0; itrack < N_proc; ++itrack)
   {
     // Hmmh ... this should all be solved by partitioning ... let's try below ...
     //
@@ -614,8 +613,8 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
 
     phiBinMinus = std::max(0,phiBinMinus);
     phiBinMinus = std::min(Config::nPhiPart-1,phiBinMinus);
-    phiBinPlus = std::max(0,phiBinPlus);
-    phiBinPlus = std::min(Config::nPhiPart-1,phiBinPlus);
+    phiBinPlus  = std::max(0,phiBinPlus);
+    phiBinPlus  = std::min(Config::nPhiPart-1,phiBinPlus);
 
 
     BinInfo binInfoMinus = bunch_of_hits.m_phi_bin_infos[int(phiBinMinus)];
@@ -1014,9 +1013,8 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 
 }
 
-#include "CandCloner.h"
-
-void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner, int offset)
+void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner,
+                                          const int offset, const int N_proc)
 {
 
   //an array of vectors, i.e. we know the size of NN and for now we add all hits passing the chi2 cut
@@ -1034,7 +1032,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
   // Determine maximum number of hits for tracks in the collection.
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
-  for (int it = 0; it < NN; ++it)
+  for (int it = 0; it < N_proc; ++it)
   {
     int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
 
@@ -1048,6 +1046,18 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     {
       maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
     }
+  }
+  // XXXX MT FIXME: Use the limit for:
+  // - SlurpIns, use masked gather for MIC_INTRINSICS
+  // - prefetching loops - DONE
+  // - computeChi2MPlex() -- really hard ... it calls Matriplex functions. This
+  //       should be fine. - DOES NOT NEED TO BE DONE
+  // - hit (valid or invalid) registration loops - DONE
+  // The following loop is not needed then. But I do need a mask for intrinsics slurpin.
+  for (int it = N_proc; it < NN; ++it)
+  {
+    idx[it]      = idx[0];
+    idx_chew[it] = idx_chew[0];
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
@@ -1070,7 +1080,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
     // Prefetch to L2 the hits we'll process after two loops iterations.
     // Ideally this would be initiated before coming here, for whole bunch_of_hits.m_hits vector.
-    for (int itrack = 0; itrack < NN; ++itrack)
+    for (int itrack = 0; itrack < N_proc; ++itrack)
     {
       _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
     }
@@ -1101,13 +1111,13 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     computeChi2MPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], outChi2);
 
     // Prefetch to L1 the hits we'll process in the next loop iteration.
-    for (int itrack = 0; itrack < NN; ++itrack)
+    for (int itrack = 0; itrack < N_proc; ++itrack)
     {
       _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
     }
 
 #pragma simd
-    for (int itrack = 0; itrack < NN; ++itrack)
+    for (int itrack = 0; itrack < N_proc; ++itrack)
       {
 	float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
 #ifdef DEBUG
@@ -1132,7 +1142,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
   //now add invalid hit
   //fixme: please vectorize me...
-  for (int itrack = 0; itrack < NN;++itrack)
+  for (int itrack = 0; itrack < N_proc; ++itrack)
     {
 #ifdef DEBUG
       std::cout << "countInvalidHits(itrack)=" << countInvalidHits(itrack) << std::endl;

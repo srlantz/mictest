@@ -74,7 +74,7 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
               << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-    m_fitter->PropagateTracksToR(4.*(m_layer + 1));//fixme: doesn't need itrack, end?
+    m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
 
     //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
     //also fill the temp vector of candidates
@@ -170,7 +170,11 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
               << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-    m_fitter->PropagateTracksToR(4.*(m_layer + 1));//fixme: doesn't need itrack, end?
+    //fixme: doesn't need itrack, end?
+    // MT 2015-08-13: YES, shows up in valgrind ... added as N_proc argument,
+    //    N-to-process, as we always run from mplex entry 0 to maximum.
+    //    Maybe also needs to be done in FindCandidates, will investigate later.
+    m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
 
     //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
     //also fill the temp vector of candidates

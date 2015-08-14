@@ -959,7 +959,7 @@ double runBuildingTestPlexOld(Event& ev)
 #ifdef DEBUG
 	   std::cout << "propagate to lay=" << ilay+1 << std::endl;
 #endif
-	   mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
+	   mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
 	 
 #ifdef TIME_DEBUG
 	   timePR += (dtime()-timeTmp);
@@ -1303,14 +1303,14 @@ double runBuildingTestPlexBestHit(Event& ev)
 	     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 		       << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-	     mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
+	     mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
 	 
 #ifdef DEBUG
 	     std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
 	     std::cout << "now get hit range" << std::endl;
 #endif
 	   
-	     mkfp->SelectHitRanges(bunch_of_hits);
+	     mkfp->SelectHitRanges(bunch_of_hits, end - itrack);
 	     
 // #ifdef PRINTOUTS_FOR_PLOTS
 // 	     std::cout << "MX number of hits in window in layer " << ilay << " is " <<  mkfp->getXHitEnd(0, 0, 0)-mkfp->getXHitBegin(0, 0, 0) << std::endl;
@@ -1700,14 +1700,14 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	       std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 			 << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-	       mkfp->PropagateTracksToR(4.*(ilay+1));//fixme: doesn't need itrack, end?
+	       mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
 	       
 #ifdef DEBUG
 	       std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
 	       std::cout << "now get hit range" << std::endl;
 #endif
 	       
-	       mkfp->SelectHitRanges(bunch_of_hits);
+	       mkfp->SelectHitRanges(bunch_of_hits, end - itrack);
 	       
 //#ifdef PRINTOUTS_FOR_PLOTS
 //std::cout << "MX number of hits in window in layer " << ilay << " is " <<  mkfp->getXHitEnd(0, 0, 0)-mkfp->getXHitBegin(0, 0, 0) << std::endl;
@@ -1720,7 +1720,8 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 
 #ifdef TEST_CLONE_ENGINE
                cloner.begin_iteration();
-	       mkfp->FindCandidatesMinimizeCopy(bunch_of_hits, cloner, th_start_seed);
+               mkfp->FindCandidatesMinimizeCopy(bunch_of_hits, cloner,
+                                                th_start_seed, end - itrack);
                cloner.end_iteration();
 #else
 	       mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);

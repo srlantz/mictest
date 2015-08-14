@@ -75,7 +75,7 @@ public:
 
   void OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);
 
-  void PropagateTracksToR(float R);
+  void PropagateTracksToR(float R, const int N_proc);
 
   void AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit, int beg, int end);
 
@@ -102,7 +102,7 @@ public:
   // MT methods
   // ================================================================
 
-  void SelectHitRanges(BunchOfHits &bunch_of_hits);
+  void SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc);
   void AddBestHit     (BunchOfHits &bunch_of_hits);
 
   void FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset);
@@ -119,7 +119,8 @@ public:
     float chi2;//total chi2 (used for sorting)
   };
   //version of find candidates that does not cloning, just fills the IdxChi2List as output (to be then read by the clone engine)
-  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner, int offset);
+  void FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner,
+                                  const int offset, const int N_proc);
 
   //version of input tracks using IdxChi2List
   void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,

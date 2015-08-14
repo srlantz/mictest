@@ -135,7 +135,7 @@ public:
 
 #ifdef CC_TIME_LAY
     t_lay = dtime() - t_lay;
-    printf("CandCloner::end_layer t_lay=%8.6f\n", t_lay);
+    printf("CandCloner::end_layer %d -- t_lay=%8.6f\n", m_layer, t_lay);
 #endif
   }
 
