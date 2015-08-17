@@ -1,4 +1,8 @@
+#ifndef HitStructures_H
+#define HitStructures_H
+
 #include "Hit.h"
+#include "Track.h"
 
 // for each layer
 //   Config::nEtaBin vectors of hits, resized to large enough N
@@ -344,3 +348,5 @@ public:
   }
 
 };
+
+#endif
