@@ -7,8 +7,8 @@
 
 #include <vector>
 
-// #define CC_TIME_LAY
-// #define CC_TIME_ETA
+//#define CC_TIME_LAYER
+//#define CC_TIME_ETA
 
 typedef std::pair<int, int> CandClonerWork_t;
 
@@ -87,7 +87,7 @@ public:
     m_idx_max      = 0;
     m_idx_max_prev = 0;
 
-#ifdef CC_TIME_LAY
+#ifdef CC_TIME_LAYER
     t_lay = dtime();
 #endif
   }
@@ -133,7 +133,7 @@ public:
       m_hits_to_add[i].clear();
     }
 
-#ifdef CC_TIME_LAY
+#ifdef CC_TIME_LAYER
     t_lay = dtime() - t_lay;
     printf("CandCloner::end_layer %d -- t_lay=%8.6f\n", m_layer, t_lay);
 #endif
@@ -181,7 +181,7 @@ public:
 
   MkFitter               *m_fitter;
 
-#if defined(CC_TIME_ETA) or defined(CC_TIME_LAY)
+#if defined(CC_TIME_ETA) or defined(CC_TIME_LAYER)
   double    t_eta, t_lay;
 #endif
 
