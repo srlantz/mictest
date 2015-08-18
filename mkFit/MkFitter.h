@@ -93,10 +93,6 @@ public:
 
   float getPar(int itrack, int i, int par) { return Par[i].ConstAt(itrack, 0, par); }
 
-  inline float normalizedPhi(float phi) {
-    return std::fmod(phi, (float) M_PI);
-  }
-
 
   // ================================================================
   // MT methods

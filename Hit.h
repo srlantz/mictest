@@ -87,6 +87,14 @@ class HitsOnLayer
 public:
 };
 
+inline float normalizedPhi(float phi)
+{
+  // Return phi between -pi and +pi.
+
+  while ( phi < -Config::PI ) phi += Config::TwoPI;
+  while ( phi >  Config::PI ) phi -= Config::TwoPI;
+  return phi;
+}
 
 inline int getPhiPartition(float phi)
 {

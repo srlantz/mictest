@@ -555,6 +555,8 @@ void MkFitter::GetHitRange(std::vector<std::vector<BinInfo> >& segmentMapLay_, i
 // MT methods
 // ======================================================================================
 
+//#define DEBUG
+
 void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
 {
   // must store hit vector into a data member so it can be used in hit selection.
@@ -600,8 +602,9 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
     const float dphiPlus  = normalizedPhi(phi+nSigmaDphi);
 
 #ifdef DEBUG
+    std::cout << "--------------------------------------------------------------------------------\n";
+    std::cout << "phi  = " << phi  << ", dphiMinus = " << dphiMinus << ", dphiPlus = " << dphiPlus << std::endl;
     std::cout << "dphi = " << dphi  << ", dphi2 = " << dphi2 << ", nSigmaDphi = " << nSigmaDphi << ", nSigma = " << Config::nSigma << std::endl;
-    std::cout << "phiMinus = " << dphiMinus << ", phiPlus = " << dphiPlus << std::endl;
 #endif
 
     int   phiBinMinus = getPhiPartition(dphiMinus);
@@ -611,23 +614,52 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
     std::cout << "phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
 #endif
 
+    // XXXX are these checks really needed?
     phiBinMinus = std::max(0,phiBinMinus);
     phiBinMinus = std::min(Config::nPhiPart-1,phiBinMinus);
     phiBinPlus  = std::max(0,phiBinPlus);
     phiBinPlus  = std::min(Config::nPhiPart-1,phiBinPlus);
 
 
-    BinInfo binInfoMinus = bunch_of_hits.m_phi_bin_infos[int(phiBinMinus)];
-    BinInfo binInfoPlus  = bunch_of_hits.m_phi_bin_infos[int(phiBinPlus)];
+    PhiBinInfo_t binInfoMinus = bunch_of_hits.m_phi_bin_infos[phiBinMinus];
+    PhiBinInfo_t binInfoPlus  = bunch_of_hits.m_phi_bin_infos[phiBinPlus];
 
+    if (binInfoPlus.first + binInfoPlus.second - binInfoMinus.first > Config::g_MaxHitsConsidered)
+    {
+      // XXXX
+      // Do something smart to reduce the range.
+      // I'd go for taking the exact phi bin and then walking left and right ...
+      // but this gives the wrap-around problem again.
+    }
+
+    // XXXX
+    // Hmmh ... maybe the copying of extras should be done on demand.
+    // BunchOfHits could know how many extras it has already.
+    // Or iuseppe is right ... and we should just update the index vector for SlurpIn
+    // instead of shifting of the base address as is done now. Sigh.
+    
     //fixme: temporary to avoid wrapping
+    // XXXX - use the extra hits available in Config::g_MaxHitsConsidered to 
     if (binInfoMinus > binInfoPlus)
     {
+#ifdef DEBUG
+      std::cout << "FIXER IN:  phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+#endif
       int phibin = getPhiPartition(phi);
+#ifdef DEBUG
+      std::cout << "FIXER   :  phibin = " << phibin << std::endl;
+#endif
+      // XXXX are those two really needed?
       phibin = std::max(0,phibin);
       phibin = std::min(Config::nPhiPart-1,phibin);
+#ifdef DEBUG
+    std::cout << "FIXER   :  phibin = " << phibin << std::endl;
+#endif
       binInfoMinus = bunch_of_hits.m_phi_bin_infos[phibin];
       binInfoPlus  = bunch_of_hits.m_phi_bin_infos[phibin];
+#ifdef DEBUG
+    std::cout << "FIXER OUT: phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+#endif
     }
 
     // fixme: if more than one eta bin we are looping over a huge range (need to make sure we are in the same eta bin)
@@ -646,6 +678,8 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
 
   }
 }
+
+//#undef DEBUG
 
 
 //==============================================================================
@@ -695,8 +729,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
   //fixme this makes results dependent on vector unit size
-  if (maxSize > 25) maxSize = 25;
-
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
@@ -871,7 +904,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
-  if (maxSize > 25) maxSize = 25;
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
@@ -1061,7 +1094,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
-  if (maxSize > 25) maxSize = 25;
+  // This will actually be applied in SelectHitRanges now ...
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],

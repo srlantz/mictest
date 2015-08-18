@@ -39,13 +39,6 @@ bool sortByPhi(Hit hit1,Hit hit2)
   return std::atan2(hit1.position()[1],hit1.position()[0])<std::atan2(hit2.position()[1],hit2.position()[0]);
 }
 
-inline float normalizedPhi(float phi) {
-  static float const TWO_PI = M_PI * 2;
-  while ( phi < -M_PI ) phi += TWO_PI;
-  while ( phi >  M_PI ) phi -= TWO_PI;
-  return phi;
-}
-
 const float etaDet = 2.0;
 bool sortByEta(const Hit& hit1, const Hit& hit2){
   return hit1.eta()<hit2.eta();

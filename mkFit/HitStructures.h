@@ -36,6 +36,8 @@ namespace Config
   // Effective eta bin is one half of nEtaPart -- so the above is twice the "average".
   // Note that last and first bin are 3/4 nEtaPart ... but can be made 1/4 by adding
   // additional bins on each end.
+
+  const int g_MaxHitsConsidered = 25;
 }
 
 typedef std::pair<int, int> PhiBinInfo_t;
@@ -80,16 +82,7 @@ public:
     _mm_free(m_hits);
   }
   
-  void Reset()
-  {
-    for (auto &bi : m_phi_bin_infos)
-    {
-      bi.first  = -1;
-      bi.second =  0;
-    }
-
-    m_fill_index = 0;
-  }
+  void Reset();
 
   void InsertHit(const Hit& hit)
   {

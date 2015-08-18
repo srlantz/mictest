@@ -28,10 +28,6 @@ typedef candvec::const_iterator canditer;
 
 void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidates, unsigned int ilay, bool debug);
 
-inline float normalizedPhi(float phi) {
-  return std::fmod(phi, (float) M_PI);
-}
-
 #ifdef ETASEG
 inline float normalizedEta(float eta) {
   static float const ETA_DET = 2.0;

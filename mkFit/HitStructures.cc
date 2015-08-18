@@ -1,5 +1,16 @@
 #include "HitStructures.h"
 
+void BunchOfHits::Reset()
+{
+  for (auto &bi : m_phi_bin_infos)
+  {
+    bi.first  = -1;
+    bi.second =  0;
+  }
+
+  m_fill_index = 0;
+}
+
 void BunchOfHits::SortByPhiBuildPhiBins()
 {
   std::sort(&m_hits[0], &m_hits[m_fill_index], sortHitsByPhiMT);
@@ -23,7 +34,8 @@ void BunchOfHits::SortByPhiBuildPhiBins()
     ++idx;
   }
 
-  //now fix empty bins
+  // Fix empty bins.
+  // XXXX MT ... hmmh, I should probably fix the above loop to do it right :)
   int nextHitToFind = 0;
   for (int b = 0; b < Config::nPhiPart; ++b)
   {
@@ -36,5 +48,11 @@ void BunchOfHits::SortByPhiBuildPhiBins()
       nextHitToFind = m_phi_bin_infos[b].first + m_phi_bin_infos[b].second;
     }
     //std::cout << "bin=" << b << " set to " << m_phi_bin_infos[b].first << "," << m_phi_bin_infos[b].second << std::endl;
+  }
+
+  // Copy first g_MaxHitsConsidered to the end to simplify +/- pi break.
+  for (int i = 0; i < Config::g_MaxHitsConsidered; ++i)
+  {
+    InsertHit(m_hits[i]);
   }
 }
