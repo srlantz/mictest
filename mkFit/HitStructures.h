@@ -38,6 +38,8 @@ namespace Config
   // additional bins on each end.
 
   const int g_MaxHitsConsidered = 25;
+
+  const bool g_PropagateAtEnd = false;
 }
 
 typedef std::pair<int, int> PhiBinInfo_t;
@@ -323,7 +325,7 @@ public:
     // XXXX the R condition is trying to get rid of bad seeds (as a quick hack)
     int bin = Config::getEtaBin(seed.momEta());
     float r = seed.posR();
-    if (bin != -1 && r > 11.9 && r < 12.1)
+    if (bin != -1 && ( (Config::g_PropagateAtEnd == false && r > 11.9 && r < 12.1) || (Config::g_PropagateAtEnd == true && r > 15.9 && r < 16.1) ) )
       {
 	m_etabins_of_comb_candidates[bin].InsertSeed(seed);
       } 

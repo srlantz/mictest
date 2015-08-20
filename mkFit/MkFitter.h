@@ -60,7 +60,7 @@ public:
 
   void InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec>& layerHits, int beg, int end);
   void InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);
-  void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end);
+  void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end, bool inputProp = false);
   void InputTracksOnly   (std::vector<Track>& tracks, int beg, int end);
   void InputHitsOnly(std::vector<Hit>& hits, int beg, int end);
   void FitTracks();
@@ -73,7 +73,7 @@ public:
     return OutputTracks(tracks,beg,end,iP);
   }
 
-  void OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);
+  void OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end, bool outputProp = false);
 
   void PropagateTracksToR(float R, const int N_proc);
 
@@ -121,13 +121,23 @@ public:
   //version of input tracks using IdxChi2List
   void InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
                             std::vector<std::pair<int,IdxChi2List> >& idxs,
-                            int beg, int end);
+                            int beg, int end, bool inputProp = false);
+
+  //method used by the clone engine to do the actual cloning on the predefined candidate+hit
+  void UpdateWithHit(BunchOfHits &bunch_of_hits,
+		     std::vector<std::pair<int,IdxChi2List> >& idxs,
+		     std::vector<std::vector<Track> >& cands_for_next_lay,
+		     int offset, int beg, int end);
 
   //method used by the clone engine to do the actual cloning on the predefined candidate+hit
   void UpdateWithHit(BunchOfHits &bunch_of_hits,
                      std::vector<std::pair<int,IdxChi2List> >& idxs,
-                     std::vector<std::vector<Track> >& cands_for_next_lay,
-                     int offset, int beg, int end);
+                     int beg, int end);
+
+  //method used by the clone engine to do the actual cloning on the predefined candidate+hit
+  void CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
+		    std::vector<std::vector<Track> >& cands_for_next_lay,
+		    int offset, int beg, int end, bool outputProp = false);
 };
 
 #endif

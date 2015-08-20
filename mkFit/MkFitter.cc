@@ -89,7 +89,7 @@ void MkFitter::InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end
   }
 }
 
-void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end)
+void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end, bool inputProp)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -105,9 +105,17 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
     Label(itrack, 0, 0) = trk.label();
     SeedIdx(itrack, 0, 0) = idxs[i].first;
     CandIdx(itrack, 0, 0) = idxs[i].second;
-
-    Err[iC].CopyIn(itrack, trk.errors().Array());
-    Par[iC].CopyIn(itrack, trk.parameters().Array());
+    
+    if (inputProp) 
+    {
+      Err[iP].CopyIn(itrack, trk.errors().Array());
+      Par[iP].CopyIn(itrack, trk.parameters().Array());
+    }
+    else
+    {
+      Err[iC].CopyIn(itrack, trk.errors().Array());
+      Par[iC].CopyIn(itrack, trk.parameters().Array());
+    }
 
     Chg(itrack, 0, 0) = trk.charge();
     Chi2(itrack, 0, 0) = trk.chi2();
@@ -220,7 +228,7 @@ void MkFitter::OutputTracks(std::vector<Track>& tracks, int beg, int end, int iC
   }
 }
 
-void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end)
+void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end, bool outputProp)
 {
   // Copies last track parameters (updated) into Track objects and up to Nhits.
   // The tracks vector should be resized to allow direct copying.
@@ -228,8 +236,16 @@ void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, 
   int itrack = 0;
   for (int i = beg; i < end; ++i, ++itrack)
   {
-    Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
-    Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    if (outputProp)
+    {
+      Err[iP].CopyOut(itrack, tracks[i].errors_nc().Array());
+      Par[iP].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    }
+    else 
+    { 
+      Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
+      Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    }
 
     tracks[i].setCharge(Chg(itrack, 0, 0));
     tracks[i].setChi2(Chi2(itrack, 0, 0));
@@ -1199,7 +1215,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
 void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
                                     std::vector<std::pair<int,MkFitter::IdxChi2List> >& idxs,
-                                    int beg, int end)
+                                    int beg, int end, bool inputProp)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -1216,8 +1232,16 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
     SeedIdx(itrack, 0, 0) = idxs[i].first;
     CandIdx(itrack, 0, 0) = idxs[i].second.trkIdx;
 
-    Err[iC].CopyIn(itrack, trk.errors().Array());
-    Par[iC].CopyIn(itrack, trk.parameters().Array());
+    if (inputProp) 
+    {
+      Err[iP].CopyIn(itrack, trk.errors().Array());
+      Par[iP].CopyIn(itrack, trk.parameters().Array());
+    } 
+    else 
+    {      
+      Err[iC].CopyIn(itrack, trk.errors().Array());
+      Par[iC].CopyIn(itrack, trk.parameters().Array());
+    } 
 
     Chg(itrack, 0, 0) = trk.charge();
     Chi2(itrack, 0, 0) = trk.chi2();
@@ -1264,6 +1288,75 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
       newcand.setLabel(Label(itrack, 0, 0));
       //set the track state to the updated parameters
       if (idxs[i].second.hitIdx < 0) {
+	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
+      } else {
+	Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
+      }
+#ifdef DEBUG
+      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
+#endif
+
+      cands_for_next_lay[SeedIdx(itrack, 0, 0) - offset].push_back(newcand);
+    }
+}
+
+void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
+                             std::vector<std::pair<int,IdxChi2List> >& idxs,
+                             int beg, int end)
+{
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if (idxs[i].second.hitIdx < 0) continue;
+      Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
+    }
+  
+  updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
+
+  //now that we have moved propagation at the end of the sequence we lost the handle of 
+  //using the propagated parameters instead of the updated for the missing hit case. 
+  //so we need to replace by hand the updated with the propagated
+  //there may be a better way to restore this...
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if (idxs[i].second.hitIdx < 0) {
+	Err[iC] = Err[iP];
+	Par[iC] = Par[iP];
+      }
+    }
+  
+}
+
+
+void MkFitter::CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
+			    std::vector<std::vector<Track> >& cands_for_next_lay,
+			    int offset, int beg, int end, bool outputProp)
+{
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      //create a new candidate and fill the cands_for_next_lay vector
+      Track newcand;
+      // Not needed after construction.
+      // newcand.resetHits(); //probably not needed
+      newcand.setCharge(Chg(itrack, 0, 0));
+      newcand.setChi2(idxs[i].second.chi2);
+      for (int hi = 0; hi < Nhits; ++hi)
+	{
+	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0), 0.);//this should be ok since we already set the chi2 above
+	}
+      newcand.addHitIdx(idxs[i].second.hitIdx, 0.);
+      newcand.setLabel(Label(itrack, 0, 0));
+      //set the track state to the updated parameters
+
+      if (outputProp) {
 	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
 	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
       } else {

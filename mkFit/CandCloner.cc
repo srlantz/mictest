@@ -62,23 +62,56 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
     int end = std::min(itrack + NN, theEndNewCand);
 
     ////m_fitter->SetNhits(ilay);//here again assuming one hit per layer
-	       
-    m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, seed_newcand_idx, itrack, end);
-	       
-    //propagate to layer
+
+    if (Config::g_PropagateAtEnd) {
+
+      m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, seed_newcand_idx, itrack, end, true);
+
+      //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
+      //also fill the temp vector of candidates
+      m_fitter->UpdateWithHit(*mp_bunch_of_hits, seed_newcand_idx, itrack, end);
+
+      if (m_layer!=9) 
+      {      
+	//propagate to next layer
 #ifdef DEBUG
-    EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
-    MkFitter *mkfp = m_fitter;
-    int ilay = m_layer;
-
-    std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
-              << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+	EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+	MkFitter *mkfp = m_fitter;
+	int ilay = m_layer;
+	
+	std::cout << "propagate to lay=" << ilay+2 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+		  << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-    m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
+	m_fitter->PropagateTracksToR(4.*(m_layer + 2), end - itrack);
 
-    //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
-    //also fill the temp vector of candidates
-    m_fitter->UpdateWithHit(*mp_bunch_of_hits, seed_newcand_idx, cands_for_next_lay, m_start_seed, itrack, end);
+	m_fitter->CopyOutClone(seed_newcand_idx, cands_for_next_lay, m_start_seed, itrack, end, true);
+
+      } 
+      else 
+      {
+	m_fitter->CopyOutClone(seed_newcand_idx, cands_for_next_lay, m_start_seed, itrack, end);
+      }
+
+    } else {
+
+      m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, seed_newcand_idx, itrack, end);
+      
+      //propagate to layer
+#ifdef DEBUG
+      EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+      MkFitter *mkfp = m_fitter;
+      int ilay = m_layer;
+      
+      std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+		<< " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+#endif
+      m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
+      
+      //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
+      //also fill the temp vector of candidates
+      m_fitter->UpdateWithHit(*mp_bunch_of_hits, seed_newcand_idx, cands_for_next_lay, m_start_seed, itrack, end);
+
+    }
 
   }
   //3) now swap the temp vector with the input candidates so that they are used as input for the next layer
@@ -160,26 +193,65 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
 
     ////m_fitter->SetNhits(ilay);//here again assuming one hit per layer
 
-    m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, t_seed_newcand_idx, itrack, end);
-
-    //propagate to layer
+    if (Config::g_PropagateAtEnd) 
+    {
+      m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, t_seed_newcand_idx, itrack, end, true);
+      
+      //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
+      //also fill the temp vector of candidates
+      m_fitter->UpdateWithHit(*mp_bunch_of_hits, t_seed_newcand_idx, itrack, end);
+      
+      if (m_layer!=9) 
+      {
+	//propagate to next layer
 #ifdef DEBUG
-    MkFitter *mkfp = m_fitter;
-    int ilay = m_layer;
-
-    std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
-              << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+	MkFitter *mkfp = m_fitter;
+	int ilay = m_layer;
+	
+	std::cout << "propagate to lay=" << ilay+2 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+		  << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-    //fixme: doesn't need itrack, end?
-    // MT 2015-08-13: YES, shows up in valgrind ... added as N_proc argument,
-    //    N-to-process, as we always run from mplex entry 0 to maximum.
-    //    Maybe also needs to be done in FindCandidates, will investigate later.
-    m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
+	//fixme: doesn't need itrack, end?
+	// MT 2015-08-13: YES, shows up in valgrind ... added as N_proc argument,
+	//    N-to-process, as we always run from mplex entry 0 to maximum.
+	//    Maybe also needs to be done in FindCandidates, will investigate later.
+	m_fitter->PropagateTracksToR(4.*(m_layer + 2), end - itrack);
+	  
+	m_fitter->CopyOutClone(t_seed_newcand_idx, t_cands_for_next_lay,
+			       m_start_seed + is_beg, itrack, end, true);
+      }
+      else
+      {
+	m_fitter->CopyOutClone(t_seed_newcand_idx, t_cands_for_next_lay,
+			       m_start_seed + is_beg, itrack, end);	
+      }
 
-    //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
-    //also fill the temp vector of candidates
-    m_fitter->UpdateWithHit(*mp_bunch_of_hits, t_seed_newcand_idx, t_cands_for_next_lay,
-                            m_start_seed + is_beg, itrack, end);
+    } 
+    else 
+    {
+      m_fitter->InputTracksAndHitIdx(mp_etabin_of_comb_candidates->m_candidates, t_seed_newcand_idx, itrack, end);
+
+      //propagate to layer
+#ifdef DEBUG
+      MkFitter *mkfp = m_fitter;
+      int ilay = m_layer;
+      
+      std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+		<< " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+#endif
+      //fixme: doesn't need itrack, end?
+      // MT 2015-08-13: YES, shows up in valgrind ... added as N_proc argument,
+      //    N-to-process, as we always run from mplex entry 0 to maximum.
+      //    Maybe also needs to be done in FindCandidates, will investigate later.
+      m_fitter->PropagateTracksToR(4.*(m_layer + 1), end - itrack);
+      
+      //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
+      //also fill the temp vector of candidates
+      m_fitter->UpdateWithHit(*mp_bunch_of_hits, t_seed_newcand_idx, t_cands_for_next_lay,
+			      m_start_seed + is_beg, itrack, end);
+      
+    }
+
   }
 
   //3) now swap the temp vector with the input candidates so that they are used as input for the next layer

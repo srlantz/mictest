@@ -1515,7 +1515,18 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 
     mkfp->FitTracks();
 
-    mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end);
+    if (Config::g_PropagateAtEnd) {
+      int ilay = 3;//layer 4
+#ifdef DEBUG
+      std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+		<< " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+#endif
+      mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+      
+      mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end, true);
+    } else {
+      mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end);
+    } 
   }
 
   //ok now, we should have all seeds fitted in recseeds
@@ -1552,6 +1563,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
                 << " x=" << seed.position()[0] << " y=" << seed.position()[1] << " z=" << seed.position()[2] 
                 << " px=" << seed.momentum()[0] << " py=" << seed.momentum()[1] << " pz=" << seed.momentum()[2] 
                 << " pT=" << sqrt(seed.momentum()[0]*seed.momentum()[0]+seed.momentum()[1]*seed.momentum()[1]) 
+		<< " etabin=" << ebin
                 << std::endl;
     }
   }
@@ -1625,6 +1637,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
        int th_n_seeds = th_end_seed-th_start_seed;
 
 #ifdef DEBUG
+       std::cout << "ebin=" << ebin << std::endl;
        omp_set_lock(&writelock);
        if (n_th_per_eta_bin>=1)
 	 std::cout << "th_start_seed-a=" << 0 << " th_end_seed-a=" << etabin_of_comb_candidates.m_fill_index << " th_start_seed-b=" << (thread_num % n_th_per_eta_bin) * nseeds_ebin / n_th_per_eta_bin << " th_end_seed-b=" << std::min( ( (thread_num % n_th_per_eta_bin)+ 1) * nseeds_ebin / n_th_per_eta_bin, nseeds_ebin ) << std::endl;
@@ -1657,7 +1670,10 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 		 }
 	     }
 	   int theEndCand = seed_cand_idx.size();     
-	   
+
+	   //don't bother messing with the clone engine if there are no candidates (actually it crashes, so this protection is needed)
+	   if (theEndCand==0) continue;
+ 
 #ifdef TEST_CLONE_ENGINE
            cloner.begin_layer(&bunch_of_hits, ilay);
 #else
@@ -1684,19 +1700,30 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	       MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
 	       
 	       mkfp->SetNhits(ilay);//here again assuming one hit per layer
+
+	       if (Config::g_PropagateAtEnd) {
+
+		 //fixme find a way to deal only with the candidates needed in this thread
+		 mkfp->InputTracksAndHitIdx(etabin_of_comb_candidates.m_candidates, seed_cand_idx, itrack, end, true);
+
+	       } else {
 	       
-	       //fixme find a way to deal only with the candidates needed in this thread
-	       mkfp->InputTracksAndHitIdx(etabin_of_comb_candidates.m_candidates, seed_cand_idx, itrack, end);
-	       
-	       //propagate to layer
+		 //fixme find a way to deal only with the candidates needed in this thread
+		 mkfp->InputTracksAndHitIdx(etabin_of_comb_candidates.m_candidates, seed_cand_idx, itrack, end);
+		 
+		 //propagate to layer
 #ifdef DEBUG
-	       std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
-			 << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
+		 std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+			   << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-	       mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+		 mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+#ifdef DEBUG
+		 std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
+#endif
+		 
+	       }
 	       
 #ifdef DEBUG
-	       std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
 	       std::cout << "now get hit range" << std::endl;
 #endif
 	       
@@ -1718,7 +1745,20 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
                cloner.end_iteration();
 #else
 	       mkfp->FindCandidates(bunch_of_hits,tmp_candidates,th_start_seed);
+
+	       if (Config::g_PropagateAtEnd) {
+		 //propagate to layer
+#ifdef DEBUG
+		 std::cout << "propagate to lay=" << ilay+2 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
+			   << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
+		 mkfp->PropagateTracksToR(4.*(ilay+2), end - itrack);
+#ifdef DEBUG
+		 std::cout << "propagate to lay=" << ilay+2 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
+#endif
+	       }
+
+#endif //TEST_CLONE_ENGINE
 	       
 	     } //end of vectorized loop
 
