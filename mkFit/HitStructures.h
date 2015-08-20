@@ -39,7 +39,7 @@ namespace Config
 
   const int g_MaxHitsConsidered = 25;
 
-  const bool g_PropagateAtEnd = false;
+  const bool g_PropagateAtEnd = true;
 }
 
 typedef std::pair<int, int> PhiBinInfo_t;

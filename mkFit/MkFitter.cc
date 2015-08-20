@@ -1169,6 +1169,10 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 #pragma simd
     for (int itrack = 0; itrack < N_proc; ++itrack)
       {
+
+	//make sure the hit was in the compatiblity window for the candidate
+	if (hit_cnt >= (XHitEnd.At(itrack, 0, 0) - XHitBegin.At(itrack, 0, 0)) ) continue;
+
 	float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
 #ifdef DEBUG
 	std::cout << "chi2=" << chi2 << " for trkIdx=" << itrack << std::endl;
@@ -1221,6 +1225,8 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
 
   // This might not be true for the last chunk!
   // assert(end - beg == NN);
+
+  //fixme: why do we need both i and itrack in the loops below?
 
   int itrack = 0;
   for (int i = beg; i < end; ++i, ++itrack)
@@ -1322,12 +1328,16 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
   //using the propagated parameters instead of the updated for the missing hit case. 
   //so we need to replace by hand the updated with the propagated
   //there may be a better way to restore this...
+  itrack = 0;
 #pragma simd
   for (int i = beg; i < end; ++i, ++itrack)
     {
       if (idxs[i].second.hitIdx < 0) {
-	Err[iC] = Err[iP];
-	Par[iC] = Par[iP];
+	float tmp[21] = {0.};
+	Err[iP].CopyOut(itrack, tmp);
+	Err[iC].CopyIn(itrack, tmp);
+	Par[iP].CopyOut(itrack, tmp);
+	Par[iC].CopyIn(itrack, tmp);
       }
     }
   
@@ -1354,8 +1364,8 @@ void MkFitter::CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
 	}
       newcand.addHitIdx(idxs[i].second.hitIdx, 0.);
       newcand.setLabel(Label(itrack, 0, 0));
-      //set the track state to the updated parameters
 
+      //set the track state to the updated parameters
       if (outputProp) {
 	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
 	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
