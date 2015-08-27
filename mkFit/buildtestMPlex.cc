@@ -1396,8 +1396,6 @@ double runBuildingTestPlex(Event& ev, CandCloner& cloner)
 double runBuildingTestPlex(Event& ev)
 #endif
 {
-  printf("Hello, runBuildingTestPlex sizeof(Track)=%d, sizeof(Hit)=%d, vusize=%i, num_th=%i\n\n", sizeof(Track), sizeof(Hit), MPT_SIZE, NUM_THREADS);
-
   std::vector<Track>& simtracks = ev.simTracks_;
 
   std::cout << "total simtracks=" << simtracks.size() << std::endl;
@@ -1456,13 +1454,13 @@ double runBuildingTestPlex(Event& ev)
 
   int theEnd = simtracks.size();
 
-  double time = dtime();
+  double time;
 #ifdef BEST_OF_TEN
 double best_time = 999999;
 for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 {
-  time = dtime();
 #endif
+  time = dtime();
 
   std::vector<Track> recseeds;
   recseeds.resize(simtracks.size());

@@ -25,7 +25,7 @@ namespace
   int   g_file_num_ev = 0;
   int   g_file_cur_ev = 0;
 
-  std::string g_operation;
+  std::string g_operation = "simulate_and_process";
   std::string g_file_name = "simtracks.bin";
 }
 
@@ -130,8 +130,10 @@ void test_standard()
   // return;
   // ---- end MT test
 
-  printf("sizeof(Hit)=%d, sizeof(SVector3)=%d, sizeof(SMatrixSym33)=%d, sizeof(MCHitInfo)=%d\n",
-         sizeof(Hit), sizeof(SVector3), sizeof(SMatrixSym33), sizeof(MCHitInfo));
+  printf("Running test_standard(), operation=\"%s\"\n", g_operation.c_str());
+  printf("  vusize=%i, num_th=%i\n",  MPT_SIZE, NUM_THREADS);
+  printf("  sizeof(Track)=%d, sizeof(Hit)=%d, sizeof(SVector3)=%d, sizeof(SMatrixSym33)=%d, sizeof(MCHitInfo)=%d\n",
+         sizeof(Track), sizeof(Hit), sizeof(SVector3), sizeof(SMatrixSym33), sizeof(MCHitInfo));
 
   int Ntracks = Config::g_NTracks;
   // Ntracks  = 1;
@@ -161,8 +163,10 @@ void test_standard()
 #endif
 #endif
 
-  for (int iev = 0; iev < Nevents; ++iev)
+  for (int iev = 1; iev <= Nevents; ++iev)
   {
+    printf("\n");
+    printf("Processing event %d\n", iev);
 
     Event ev(geom, val);
 
