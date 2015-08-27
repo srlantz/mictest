@@ -1075,7 +1075,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
-  int idx_chew[NN] __attribute__((aligned(64)));
+  // int idx_chew[NN] __attribute__((aligned(64)));
 
   int maxSize = -1;
 
@@ -1089,7 +1089,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
 
     idx[it]      = off;
-    idx_chew[it] = it*sizeof(Hit);
+    // idx_chew[it] = it*sizeof(Hit);
 
     if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
     {
@@ -1106,7 +1106,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   for (int it = N_proc; it < NN; ++it)
   {
     idx[it]      = idx[0];
-    idx_chew[it] = idx_chew[0];
+    // idx_chew[it] = idx_chew[0];
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
@@ -1117,7 +1117,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
   //                               idx[ 8], idx[ 9], idx[10], idx[11], idx[12], idx[13], idx[14], idx[15]);
   __m512i vi      = _mm512_load_epi32(idx);
-  __m512i vi_chew = _mm512_load_epi32(idx_chew);
+  // __m512i vi_chew = _mm512_load_epi32(idx_chew);
 #endif
 
 // Has basically no effect, it seems.
