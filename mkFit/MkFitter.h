@@ -29,8 +29,8 @@ class MkFitter
   MPlexQI HitsIdx[MAX_HITS];
 
   // Hold hit indices to explore at current layer.
-  MPlexQI XHitBegin; // Should be pos (so can move it forward)
-  MPlexQI XHitEnd;   // Should be size (so i can reduce it)
+  MPlexQI XHitPos;   // Should be pos (so can move it forward)
+  MPlexQI XHitSize;  // Should be size (so i can reduce it)
                      // with pos size could even handle phi wrap! XXXX do it
   // Indices into Err and Par arrays.
   // Thought I'll have to flip between them ...
@@ -55,8 +55,8 @@ public:
 
   void PrintPt(int idx);
 
-  int getXHitBegin(int arg0,int arg1,int arg2) { return XHitBegin.At(arg0, arg1, arg2); }
-  int getXHitEnd  (int arg0,int arg1,int arg2) { return XHitEnd  .At(arg0, arg1, arg2); }
+  //int getXHitBegin(int arg0,int arg1,int arg2) { return XHitBegin.At(arg0, arg1, arg2); }
+  //int getXHitEnd  (int arg0,int arg1,int arg2) { return XHitEnd  .At(arg0, arg1, arg2); }
 
   void InputTracksAndHits(std::vector<Track>& tracks, std::vector<HitVec>& layerHits, int beg, int end);
   void InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end);

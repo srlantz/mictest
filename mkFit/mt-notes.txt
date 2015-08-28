@@ -60,3 +60,21 @@ valgrind --log-file=vg.5 --error-limit=no --dsymutil=yes --leak-check=no --time-
 valgrind --vgdb=yes --vgdb-error=0 --error-limit=no --leak-check=no --track-origins=yes --time-stamp=yes ./mkFit
 gdb ./mkFit
   target remote | vgdb
+
+
+########
+Thread pinning notes
+########
+
+Thread pinning on host
+
+  7.07s -- CandCloner cloner(8, 20); // Same core
+  6.13s -- CandCloner cloner(1, 2);  // Same socket, another core
+  7.90s -- CandCloner cloner(1, 7);  // Another socket
+
+Thread pinning on MIC (no real difference)
+
+ 38.00s -- CandCloner cloner(1,  2);  // Same core (any pair of 1,2,3,4)
+ 37.95s -- CandCloner cloner(1,  5);  // Another cpu
+ 36.75s -- CandCloner cloner(1, 25);  // Another cpu
+ 37.75s -- CandCloner cloner(1, 233); // Another cpu

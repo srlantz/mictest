@@ -4,6 +4,8 @@
 #include "PropagationMPlex.h"
 #include "KalmanUtilsMPlex.h"
 
+#include <sstream>
+
 void MkFitter::CheckAlignment()
 {
   printf("MkFitter alignment check:\n");
@@ -618,16 +620,18 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
     const float dphiPlus  = normalizedPhi(phi+nSigmaDphi);
 
 #ifdef DEBUG
-    std::cout << "--------------------------------------------------------------------------------\n";
-    std::cout << "phi  = " << phi  << ", dphiMinus = " << dphiMinus << ", dphiPlus = " << dphiPlus << std::endl;
-    std::cout << "dphi = " << dphi  << ", dphi2 = " << dphi2 << ", nSigmaDphi = " << nSigmaDphi << ", nSigma = " << Config::nSigma << std::endl;
+    std::ostringstream xout;
+    bool               xout_dump = false;
+    xout << "--------------------------------------------------------------------------------\n";
+    xout << "phi  = " << phi  << ", dphiMinus = " << dphiMinus << ", dphiPlus = " << dphiPlus << std::endl;
+    xout << "dphi = " << dphi  << ", dphi2 = " << dphi2 << ", nSigmaDphi = " << nSigmaDphi << ", nSigma = " << Config::nSigma << std::endl;
 #endif
 
     int   phiBinMinus = getPhiPartition(dphiMinus);
     int   phiBinPlus  = getPhiPartition(dphiPlus);
 
 #ifdef DEBUG
-    std::cout << "phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+    xout << "phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
 #endif
 
     // XXXX are these checks really needed?
@@ -651,45 +655,56 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
     // XXXX
     // Hmmh ... maybe the copying of extras should be done on demand.
     // BunchOfHits could know how many extras it has already.
-    // Or iuseppe is right ... and we should just update the index vector for SlurpIn
+    // Or Giuseppe is right ... and we should just update the index vector for SlurpIn
     // instead of shifting of the base address as is done now. Sigh.
     
-    //fixme: temporary to avoid wrapping
-    // XXXX - use the extra hits available in Config::g_MaxHitsConsidered to 
+    // fixme: temporary to avoid wrapping
+    // This is now fixed with Config::g_MaxHitsConsidered extra hits copied to the end +
+    // changing XHitBegin/End to XHitPos/Size.
+    // Putting all of it into DEBUG
+#ifdef DEBUG
     if (binInfoMinus > binInfoPlus)
     {
-#ifdef DEBUG
-      std::cout << "FIXER IN:  phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
-#endif
+      // xout_dump = true;
+      xout << "FIXER IN:  phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+      xout << "FIXER IN:  BIMinus.first = " << binInfoMinus.first << ", BIPlus.first = " << binInfoPlus.first << std::endl;
+      xout << "FIXER IN:  BIMinus.second = " << binInfoMinus.second << ", BIPlus.second = " << binInfoPlus.second << std::endl;
+
       int phibin = getPhiPartition(phi);
-#ifdef DEBUG
-      std::cout << "FIXER   :  phibin = " << phibin << std::endl;
-#endif
+
+      xout << "FIXER   :  phibin = " << phibin << std::endl;
+
       // XXXX are those two really needed?
       phibin = std::max(0,phibin);
       phibin = std::min(Config::nPhiPart-1,phibin);
-#ifdef DEBUG
-    std::cout << "FIXER   :  phibin = " << phibin << std::endl;
+
+      xout << "FIXER   :  phibin = " << phibin << std::endl;
+    }
 #endif
-      binInfoMinus = bunch_of_hits.m_phi_bin_infos[phibin];
-      binInfoPlus  = bunch_of_hits.m_phi_bin_infos[phibin];
-#ifdef DEBUG
-    std::cout << "FIXER OUT: phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
-#endif
+
+    XHitPos .At(itrack, 0, 0) = binInfoMinus.first;
+    XHitSize.At(itrack, 0, 0) = binInfoPlus .first + binInfoPlus.second - binInfoMinus.first;
+    if (XHitSize.At(itrack, 0, 0) < 0)
+    {
+      // XXX It would be nice to have BunchOfHits.m_n_real_hits.
+      XHitSize.At(itrack, 0, 0) += bunch_of_hits.m_fill_index - Config::g_MaxHitsConsidered;
     }
 
-    // fixme: if more than one eta bin we are looping over a huge range (need to make sure we are in the same eta bin)
-    // MT -- this is being fixed here. Plus improving other things ... and screwing up others :)
+    // XXXX Hack to limit N_hits to g_MaxHitsConsidered.
+    // Should at least take hits around central bin -- to be explored, esp. with jet presence.
+    // Strange ... this is worse than just taking first 25 hits !!!
+    // Comment out for now. Must talk to Giuseppe about this.
+    // if (XHitSize.At(itrack, 0, 0) > Config::g_MaxHitsConsidered)
+    // {
+    //   xout_dump = true;
+    //   XHitPos .At(itrack, 0, 0) += (XHitSize.At(itrack, 0, 0) - Config::g_MaxHitsConsidered) / 2;
+    //   XHitSize.At(itrack, 0, 0) = Config::g_MaxHitsConsidered;
+    // }
 
 #ifdef DEBUG
-    std::cout << "bin info begin=" << binInfoMinus.first << " end=" << binInfoPlus.first+binInfoPlus.second << std::endl;
-#endif
-
-    XHitBegin.At(itrack, 0, 0) = binInfoMinus.first;
-    XHitEnd  .At(itrack, 0, 0) = binInfoPlus .first + binInfoPlus.second;
-
-#ifdef DEBUG
-    std::cout << "found range firstHit=" << XHitBegin.At(itrack, 0, 0) << " lastHit=" << XHitEnd  .At(itrack, 0, 0) << std::endl;
+    xout << "found range firstHit=" << XHitPos.At(itrack, 0, 0) << " size=" << XHitSize.At(itrack, 0, 0) << std::endl;
+    if (xout_dump)
+       std::cout << xout.str();
 #endif
 
   }
@@ -727,7 +742,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
   for (int it = 0; it < NN; ++it)
   {
-    int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
 #ifndef NO_PREFETCH
     _mm_prefetch(varr + off, _MM_HINT_T0);
@@ -737,10 +752,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     idx[it]      = off;
     idx_chew[it] = it*sizeof(Hit);
 
-    if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
-    {
-      maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
-    }
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
@@ -774,8 +786,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 #pragma simd
     for (int itrack = 0; itrack < NN; ++itrack)
     {
-      if ( XHitBegin.At(itrack, 0, 0) >= XHitEnd.At(itrack, 0, 0) ) continue;//is this going to break vectorization and also crash?
-      Hit &hit = bunch_of_hits.m_hits[std::min(XHitBegin.At(itrack, 0, 0) + hit_cnt, XHitEnd.At(itrack, 0, 0) - 1)];//redo the last hit in case of overflow
+       Hit &hit = bunch_of_hits.m_hits[XHitBegin.At(itrack, 0, 0) +
+                                       std::min(hit_cnt, XHitSize.At(itrack, 0, 0) - 1)]; //redo the last hit in case of overflow
       msErr[Nhits].CopyIn(itrack, hit.errArray());
       msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
@@ -837,7 +849,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   //copy in MkFitter the hit with lowest chi2
   for (int itrack = 0; itrack < NN; ++itrack)
   {
-    _mm_prefetch((const char*) & bunch_of_hits.m_hits[XHitBegin.At(itrack, 0, 0) + bestHit[itrack]], _MM_HINT_T0);
+    _mm_prefetch((const char*) & bunch_of_hits.m_hits[XHitPos.At(itrack, 0, 0) + bestHit[itrack]], _MM_HINT_T0);
   }
     
 #pragma simd
@@ -846,7 +858,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     //fixme decide what to do in case no hit found
     if (bestHit[itrack] >= 0)
     {
-      Hit   &hit  = bunch_of_hits.m_hits[ XHitBegin.At(itrack, 0, 0) + bestHit[itrack] ];
+      Hit   &hit  = bunch_of_hits.m_hits[ XHitPos.At(itrack, 0, 0) + bestHit[itrack] ];
       float &chi2 = minChi2[itrack];
 	  
 #ifdef DEBUG
@@ -858,7 +870,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
       msErr[Nhits].CopyIn(itrack, hit.errArray());
       msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
-      HitsIdx[Nhits](itrack, 0, 0) = XHitBegin.At(itrack, 0, 0) + bestHit[itrack];
+      HitsIdx[Nhits](itrack, 0, 0) = XHitPos.At(itrack, 0, 0) + bestHit[itrack];
     }
     else
     {
@@ -905,7 +917,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
   for (int it = 0; it < NN; ++it)
   {
-    int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
     _mm_prefetch(varr + off, _MM_HINT_T0);
     _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
@@ -913,10 +925,8 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
     idx[it]      = off;
     idx_chew[it] = it*sizeof(Hit);
 
-    if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
-    {
-      maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
-    }
+    // XXX There is an intrinsic for that, out of loop.
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
@@ -1022,7 +1032,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 		{
 		  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
 		}
-	      newcand.addHitIdx(XHitBegin.At(itrack, 0, 0) + hit_cnt,chi2);
+	      newcand.addHitIdx(XHitPos.At(itrack, 0, 0) + hit_cnt,chi2);
 	      newcand.setLabel(Label(itrack, 0, 0));
 	      //set the track state to the updated parameters
 	      Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
@@ -1083,7 +1093,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
   for (int it = 0; it < N_proc; ++it)
   {
-    int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
     _mm_prefetch(varr + off, _MM_HINT_T0);
     _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
@@ -1091,10 +1101,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     idx[it]      = off;
     // idx_chew[it] = it*sizeof(Hit);
 
-    if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
-    {
-      maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
-    }
+    // XXX There is an intrinsic for that, out of loop.
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
   // XXXX MT FIXME: Use the limit for:
   // - SlurpIns, use masked gather for MIC_INTRINSICS
@@ -1132,7 +1140,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     // Ideally this would be initiated before coming here, for whole bunch_of_hits.m_hits vector.
     for (int itrack = 0; itrack < N_proc; ++itrack)
     {
-      _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
+      if (hit_cnt + 2 < XHitSize.At(itrack, 0, 0))
+        _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
     }
 
 #if defined(MIC_INTRINSICS)
@@ -1163,15 +1172,15 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     // Prefetch to L1 the hits we'll process in the next loop iteration.
     for (int itrack = 0; itrack < N_proc; ++itrack)
     {
-      _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
+      if (hit_cnt + 1 < XHitSize.At(itrack, 0, 0))
+        _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
     }
 
 #pragma simd
     for (int itrack = 0; itrack < N_proc; ++itrack)
       {
-
-	//make sure the hit was in the compatiblity window for the candidate
-	if (hit_cnt >= (XHitEnd.At(itrack, 0, 0) - XHitBegin.At(itrack, 0, 0)) ) continue;
+	// make sure the hit was in the compatiblity window for the candidate
+	if (hit_cnt >= XHitSize.At(itrack, 0, 0)) continue;
 
 	float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
 #ifdef DEBUG
@@ -1181,7 +1190,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 	  {
 	    IdxChi2List tmpList;
 	    tmpList.trkIdx = CandIdx(itrack, 0, 0);
-	    tmpList.hitIdx = XHitBegin.At(itrack, 0, 0) + hit_cnt;
+	    tmpList.hitIdx = XHitPos.At(itrack, 0, 0) + hit_cnt;
 	    tmpList.nhits  = countValidHits(itrack) + 1;
 	    tmpList.chi2   = Chi2(itrack, 0, 0) + chi2;
             cloner.add_cand(SeedIdx(itrack, 0, 0) - offset, tmpList);
