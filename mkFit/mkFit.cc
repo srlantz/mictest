@@ -108,8 +108,12 @@ void initGeom(Geometry& geom)
   // are added starting from the center
   // NB: z is just a dummy variable, VUSolid is actually infinite in size.  *** Therefore, set it to the eta of simulation ***
   float eta = 2.0; // can tune this to whatever geometry required (one can make this layer dependent as well)
+
+  float rs[10] = {4,8,12,16,20,24,28,32,36,40};
+  //float rs[10] = {4.645119,7.056270,10.394469,23.825346,35.483938,40.386077,47.831438,58.456861,68.498828,79.933505};
+
   for (int l = 0; l < 10; l++) {
-    float r = (l+1)*4.;
+    float r = rs[l];
     VUSolid* utub = new VUSolid(r, r+.01);
     float z = r / std::tan(2.0*std::atan(std::exp(-eta))); // calculate z extent based on eta, r
     geom.AddLayer(utub, r, z);

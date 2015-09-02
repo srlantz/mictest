@@ -309,3 +309,124 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
 
   } // end loop over nHitsPerTrack
 }
+
+
+#include <string>
+#include <fstream>
+#include <sstream>
+
+void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVec& hits, unsigned int itrack,
+			    int& charge, float pt, const Geometry& geom, HitVec& initHits, MCHitInfoVec& initialhitinfo)
+{
+
+  const float hitposerrXY = 0.01;//assume 100mum uncertainty in xy coordinate
+  const float hitposerrZ = 0.1;//assume 1mm uncertainty in z coordinate
+  const float hitposerrR = hitposerrXY/10.;
+
+  const float varXY  = hitposerrXY*hitposerrXY;
+  const float varZ   = hitposerrZ*hitposerrZ;
+
+  unsigned int nLayers = geom.CountLayers();
+  unsigned int layer_counts[nLayers];
+  for (unsigned int ilayer=0;ilayer<nLayers;++ilayer){
+    layer_counts[ilayer]=0;
+  }
+  unsigned int nTotHit = nLayers; // can tune this number!
+  // to include loopers, and would rather add a break on the code if layer ten exceeded
+  // if block BREAK if hit.Layer == theGeom->CountLayers() 
+  // else --> if (NMAX TO LOOPER (maybe same as 10?) {break;} else {continue;}
+  unsigned int simLayer = 0;
+  hits.reserve(nTotHit);
+  initHits.reserve(nTotHit);
+
+  std::ifstream infile("cmssw.simtracks.txt");
+  std::string line;
+  int countTracks = 0;
+  int countHits   = 0;
+  while (std::getline(infile, line)) {
+
+    std::istringstream iss(line);
+    std::string type;
+
+    std::cout << line << std::endl;
+
+    iss >> type;
+
+    if (type=="simTrack") {
+      if (itrack!=countTracks) continue;
+      countTracks++;
+      float x,y,z,px,py,pz;
+      int q;
+      iss >> x >> y >> z >> px >> py >> pz >> q;
+
+      pos=SVector3(x,y,x);
+      charge = q;
+      mom=SVector3(px,py,pz);
+      covtrk=ROOT::Math::SMatrixIdentity();
+      //initial covariance can be tricky
+      for (unsigned int r=0; r<6; ++r) {
+	for (unsigned int c=0; c<6; ++c) {
+	  if (r==c) {
+	    if (r<3) covtrk(r,c)=pow(1.0*pos[r],2);//100% uncertainty on position
+	    else covtrk(r,c)=pow(1.0*mom[r-3],2);  //100% uncertainty on momentum
+	  } else {
+	    covtrk(r,c)=0.;                   //no covariance
+	  }
+	}
+      }
+
+    }
+
+    if (type=="simHit") {
+
+      if (countHits>=nLayers) return;
+
+      float initX,initY,initZ;
+      iss >> initX >> initY >> initZ;
+
+      float initPhi = atan2(initY,initX);
+      float initRad = sqrt(initX*initX+initY*initY);
+
+      UVector3 init_point(initX,initY,initZ);
+      simLayer = geom.LayerIndex(init_point);
+      simLayer = 1;//fixme
+      
+      float hitZ    = hitposerrZ*g_gaus(g_gen)+initZ;
+      float hitPhi  = ((hitposerrXY/initRad)*g_gaus(g_gen))+initPhi;
+      float hitRad  = (hitposerrR)*g_gaus(g_gen)+initRad;
+
+      float hitRad2 = hitRad*hitRad;
+      float hitX    = hitRad*cos(hitPhi);
+      float hitY    = hitRad*sin(hitPhi);
+      
+      float varPhi = varXY/hitRad2;
+      float varR   = hitposerrR*hitposerrR;
+
+      SVector3 x1(hitX,hitY,hitZ);
+      SMatrixSym33 covXYZ = ROOT::Math::SMatrixIdentity();
+      covXYZ(0,0) = hitX*hitX*varR/hitRad2 + hitY*hitY*varPhi;
+      covXYZ(1,1) = hitX*hitX*varPhi + hitY*hitY*varR/hitRad2;
+      covXYZ(2,2) = varZ;
+      covXYZ(0,1) = hitX*hitY*(varR/hitRad2 - varPhi);
+      covXYZ(1,0) = covXYZ(0,1);
+    
+      SVector3 initVecXYZ(initX,initY,initZ);
+      int index = 10*itrack + countHits;
+      Hit initHitXYZ(initVecXYZ,covXYZ,index); 
+      MCHitInfo initHitInfo(itrack,simLayer,layer_counts[simLayer]);
+      initHits.push_back(initHitXYZ);
+      initialhitinfo.push_back(initHitInfo);
+      
+      Hit hit1(x1,covXYZ,index);
+      hits.push_back(hit1);
+
+      ++layer_counts[simLayer];
+
+      countHits++;
+
+    }
+    
+    // process pair (a,b)
+  }
+
+}

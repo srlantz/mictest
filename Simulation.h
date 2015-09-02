@@ -8,4 +8,8 @@
 
 void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVec& hits, unsigned int itrack, 
 		       int& charge, float pt, const Geometry&, HitVec& initHits, MCHitInfoVec& initialhitinfo);
+
+void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVec& hits, unsigned int itrack, 
+			    int& charge, float pt, const Geometry&, HitVec& initHits, MCHitInfoVec& initialhitinfo);
+
 #endif

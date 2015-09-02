@@ -12,7 +12,6 @@
 
 typedef std::pair<int, int> CandClonerWork_t;
 
-
 class CandCloner : public SideThread<CandClonerWork_t>
 {
 public:
@@ -76,7 +75,7 @@ public:
 #endif
   }
 
-  void begin_layer(BunchOfHits *b_o_hs, int lay)
+  void begin_layer(BunchOfHits *b_o_hs, int lay, float rad)
   {
     mp_bunch_of_hits = b_o_hs;
 
@@ -86,6 +85,8 @@ public:
 
     m_idx_max      = 0;
     m_idx_max_prev = 0;
+
+    m_rad = rad;
 
 #ifdef CC_TIME_LAYER
     t_lay = dtime();
@@ -187,6 +188,8 @@ public:
 
   int       m_start_seed, m_n_seeds;
   int       m_layer;
+
+  float     m_rad;
 };
 
 #endif

@@ -69,6 +69,7 @@ void Event::Simulate(unsigned int nTracks)
       int q=0;//set it in setup function
       float pt = 0.5+g_unif(g_gen)*9.5;//this input, 0.5<pt<10 GeV (below ~0.5 GeV does not make 10 layers)
       setupTrackByToyMC(pos,mom,covtrk,hits,itrack,q,pt,tmpgeom,initialhits,initialhitinfo);
+      //setupTrackFromTextFile(pos,mom,covtrk,hits,itrack,q,pt,tmpgeom,initialhits,initialhitinfo);
       SVector6 pars(pos[0],pos[1],pos[2],mom[0],mom[1],mom[2]);
       TrackState tk_state(pars,covtrk,q);
       Track sim_track;

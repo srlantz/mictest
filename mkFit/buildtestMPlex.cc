@@ -952,8 +952,8 @@ double runBuildingTestPlexOld(Event& ev)
 #ifdef DEBUG
 	   std::cout << "propagate to lay=" << ilay+1 << std::endl;
 #endif
-	   mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
-	 
+	   mkfp->PropagateTracksToR(ev.geom_.Radius(ilay), end - itrack);
+      
 #ifdef TIME_DEBUG
 	   timePR += (dtime()-timeTmp);
 #endif
@@ -1296,7 +1296,7 @@ double runBuildingTestPlexBestHit(Event& ev)
 	     std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 		       << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-	     mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+	     mkfp->PropagateTracksToR(ev.geom_.Radius(ilay), end - itrack);
 	 
 #ifdef DEBUG
 	     std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
@@ -1519,7 +1519,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
       std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 		<< " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-      mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+      mkfp->PropagateTracksToR(ev.geom_.Radius(ilay), end - itrack);
       
       mkfp->OutputFittedTracksAndHitIdx(recseeds, itrack, end, true);
     } else {
@@ -1673,7 +1673,8 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	   if (theEndCand==0) continue;
  
 #ifdef TEST_CLONE_ENGINE
-           cloner.begin_layer(&bunch_of_hits, ilay);
+	   if (Config::g_PropagateAtEnd && ilay+1<event_of_hits.m_n_layers) cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay+1));
+	   else cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay));
 #else
 	   std::vector<std::vector<Track> > tmp_candidates(th_n_seeds);
 	   for (int iseed=0;iseed<tmp_candidates.size();++iseed)
@@ -1714,7 +1715,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 		 std::cout << "propagate to lay=" << ilay+1 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 			   << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-		 mkfp->PropagateTracksToR(4.*(ilay+1), end - itrack);
+		 mkfp->PropagateTracksToR(ev.geom_.Radius(ilay), end - itrack);
 #ifdef DEBUG
 		 std::cout << "propagate to lay=" << ilay+1 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
 #endif
@@ -1750,7 +1751,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 		 std::cout << "propagate to lay=" << ilay+2 << " start from x=" << mkfp->getPar(0, 0, 0) << " y=" << mkfp->getPar(0, 0, 1) << " z=" << mkfp->getPar(0, 0, 2)<< " r=" << getHypot(mkfp->getPar(0, 0, 0), mkfp->getPar(0, 0, 1))
 			   << " px=" << mkfp->getPar(0, 0, 3) << " py=" << mkfp->getPar(0, 0, 4) << " pz=" << mkfp->getPar(0, 0, 5) << " pT=" << getHypot(mkfp->getPar(0, 0, 3), mkfp->getPar(0, 0, 4)) << std::endl;
 #endif
-		 mkfp->PropagateTracksToR(4.*(ilay+2), end - itrack);
+		 mkfp->PropagateTracksToR(ev.geom_.Radius(ilay+1), end - itrack);
 #ifdef DEBUG
 		 std::cout << "propagate to lay=" << ilay+2 << " arrive at x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1)) << std::endl;
 #endif
