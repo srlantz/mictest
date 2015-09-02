@@ -1429,7 +1429,9 @@ double runBuildingTestPlex(Event& ev)
     {
       event_of_hits.InsertHit(simtracks[itrack].hitsVector(ev.layerHits_)[ilay], ilay);
 #ifdef DEBUG
-      std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].position() << " phi=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi() << " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()) << std::endl;
+      std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].position() 
+		<< " r=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].r() << " phi=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi() 
+		<< " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()) << std::endl;
 #endif
     }
   }
@@ -1655,6 +1657,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	   BunchOfHits &bunch_of_hits = event_of_hits.m_layers_of_hits[ilay].m_bunches_of_hits[ebin];	     
 	   
 #ifdef DEBUG
+	   std::cout << std::endl;
 	   std::cout << "processing lay=" << ilay+1 << std::endl;
 #endif
 	   

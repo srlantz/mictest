@@ -19,6 +19,10 @@ void propagateLineToRMPlex(const MPlexLS &psErr,  const MPlexLV& psPar,
    {
       const float dr  = hipo(msPar[0 * N + n], msPar[1 * N + n]) - hipo(psPar[0 * N + n], psPar[1 * N + n]);
 
+#ifdef DEBUG
+      std::cout << "propagateLineToRMPlex dr=" << dr << std::endl;
+#endif
+
       const float pt  = hipo(psPar[3 * N + n], psPar[4 * N + n]);
       const float p   = dr / pt; // path
       const float psq = p * p;
@@ -56,6 +60,11 @@ void propagateLineToRMPlex(const MPlexLS &psErr,  const MPlexLV& psPar,
         B.fArray[19 * N + n] = A.fArray[19 * N + n] + p * (A.fArray[12 * N + n] + A.fArray[16 * N + n]) + psq * A.fArray[4 * N + n];
         B.fArray[20 * N + n] = A.fArray[20 * N + n] + p * (A.fArray[17 * N + n] + A.fArray[17 * N + n]) + psq * A.fArray[5 * N + n];
       }
+
+#ifdef DEBUG
+      std::cout << "propagateLineToRMPlex arrive at r=" << hipo(outPar[0 * N + n], outPar[1 * N + n]) << std::endl;
+#endif
+
    }
 }
 
