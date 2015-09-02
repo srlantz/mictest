@@ -341,20 +341,22 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
 
   std::ifstream infile("cmssw.simtracks.txt");
   std::string line;
-  int countTracks = 0;
-  int countHits   = 0;
+  int countTracks = -1;
+  unsigned int countHits   = 0;
+  bool gotTrack = false;
   while (std::getline(infile, line)) {
 
     std::istringstream iss(line);
     std::string type;
 
-    std::cout << line << std::endl;
+    //std::cout << line << std::endl;
 
     iss >> type;
 
     if (type=="simTrack") {
-      if (itrack!=countTracks) continue;
       countTracks++;
+      if (itrack!=countTracks) continue;
+      gotTrack = true;
       float x,y,z,px,py,pz;
       int q;
       iss >> x >> y >> z >> px >> py >> pz >> q;
@@ -377,9 +379,9 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
 
     }
 
-    if (type=="simHit") {
+    if (type=="simHit" && gotTrack) {
 
-      if (countHits>=nLayers) return;
+      countHits++;
 
       float initX,initY,initZ;
       iss >> initX >> initY >> initZ;
@@ -422,7 +424,7 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
 
       ++layer_counts[simLayer];
 
-      countHits++;
+      if (countHits>=nLayers) return;
 
     }
     
