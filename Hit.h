@@ -8,23 +8,23 @@
 
 namespace Config
 {
-  static const float    PI = 3.14159265358979323846;
-  static const float TwoPI = 6.28318530717958647692;
+  constexpr float    PI = 3.14159265358979323846;
+  constexpr float TwoPI = 6.28318530717958647692;
   
-  static constexpr const int   nPhiPart   = 1260; // 63;
-  static constexpr const float nPhiFactor = nPhiPart / TwoPI;
-  static constexpr const int   nEtaPart   = 11; // 10;
+  constexpr int   nPhiPart   = 1260; // 63;
+  constexpr float nPhiFactor = nPhiPart / TwoPI;
+  constexpr int   nEtaPart   = 11; // 10;
 
-  static const int   nEtaBin   = 2*nEtaPart - 1;
-  static const float fEtaDet   = 1;
-  static const float fEtaFull  = 2 * fEtaDet;
-  static const float lEtaPart  = fEtaFull/float(nEtaPart);
-  static const float lEtaBin   = lEtaPart/2.;
+  constexpr int   nEtaBin   = 2*nEtaPart - 1;
+  constexpr float fEtaDet   = 1;
+  constexpr float fEtaFull  = 2 * fEtaDet;
+  constexpr float lEtaPart  = fEtaFull/float(nEtaPart);
+  constexpr float lEtaBin   = lEtaPart/2.;
 
-  static const float fEtaOffB1 = fEtaDet;
-  static const float fEtaFacB1 = nEtaPart / fEtaFull;
-  static const float fEtaOffB2 = fEtaDet - fEtaFull / (2 * nEtaPart);
-  static const float fEtaFacB2 = (nEtaPart - 1) / (fEtaFull - fEtaFull / nEtaPart);
+  constexpr float fEtaOffB1 = fEtaDet;
+  constexpr float fEtaFacB1 = nEtaPart / fEtaFull;
+  constexpr float fEtaOffB2 = fEtaDet - fEtaFull / (2 * nEtaPart);
+  constexpr float fEtaFacB2 = (nEtaPart - 1) / (fEtaFull - fEtaFull / nEtaPart);
 
   // This is for extra bins narrower ... thinking about this some more it
   // seems it would be even better to have two more exta bins, hanging off at

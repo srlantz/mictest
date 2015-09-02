@@ -27,19 +27,21 @@
 
 namespace Config
 {
-  const int g_NEvents           = 10;
-  const int g_NTracks           = 20000;
-  const int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
+  constexpr int g_NEvents           = 10;
+  constexpr int g_NTracks           = 20000;
+  const     int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
 
-  const int g_MaxCandsPerSeed   = 6;
-  const int g_MaxCandsPerEtaBin = std::max(100, g_MaxCandsPerSeed * g_NTracks / Config::nEtaPart);
+  constexpr int g_MaxCandsPerSeed   = 6;
+  const     int g_MaxCandsPerEtaBin = std::max(100, g_MaxCandsPerSeed * g_NTracks / Config::nEtaPart);
   // Effective eta bin is one half of nEtaPart -- so the above is twice the "average".
   // Note that last and first bin are 3/4 nEtaPart ... but can be made 1/4 by adding
   // additional bins on each end.
 
-  const int g_MaxHitsConsidered = 25;
+  // XXX std::min/max have constexpr versions in c++-14.
 
-  const bool g_PropagateAtEnd = true;
+  constexpr int g_MaxHitsConsidered = 25;
+
+  constexpr bool g_PropagateAtEnd = true;
 }
 
 typedef std::pair<int, int> PhiBinInfo_t;
