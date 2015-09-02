@@ -1091,6 +1091,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
   // Determine maximum number of hits for tracks in the collection.
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
+#pragma simd
   for (int it = 0; it < N_proc; ++it)
   {
     int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
@@ -1176,7 +1177,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
         _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
     }
 
-#pragma simd
+#pragma simd // DOES NOT VECTORIZE AS IT IS NOW
     for (int itrack = 0; itrack < N_proc; ++itrack)
       {
 	// make sure the hit was in the compatiblity window for the candidate
@@ -1286,7 +1287,7 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
   updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
   
   itrack = 0;
-#pragma simd
+#pragma simd // DOES NOT VECTORIZE AS IT IS NOW
   for (int i = beg; i < end; ++i, ++itrack)
     {
       //create a new candidate and fill the cands_for_next_lay vector
@@ -1358,7 +1359,7 @@ void MkFitter::CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
 			    int offset, int beg, int end, bool outputProp)
 {
   int itrack = 0;
-#pragma simd
+#pragma simd // DOES NOT VECTORIZE AS IT IS NOW
   for (int i = beg; i < end; ++i, ++itrack)
     {
       //create a new candidate and fill the cands_for_next_lay vector
