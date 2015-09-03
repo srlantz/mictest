@@ -175,11 +175,6 @@ void Event::Seed()
     for (auto ilayer=0U;ilayer<Config::nlayers_per_seed;++ilayer) {//seeds have first three layers as seeds
       const auto& seed_hit = HitFromMCID(simhitids[ilayer]);
       TrackState propState = propagateHelixToR(updatedState,seed_hit.r());
-#ifdef CHECKSTATEVALID
-      if (!propState.valid) {
-        break;
-      }
-#endif
       MeasurementState measState = seed_hit.measurementState();
       updatedState = updateParameters(propState, measState);
       seedhits.push_back(HitIDFromMCID(simhitids[ilayer]));

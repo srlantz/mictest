@@ -298,12 +298,8 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
     }
   
 #ifdef LINEARINTERP
-    const float minR = ev.geom_.Radius(ilayer);
-    float maxR = minR;
-    for(index_iter = cand_hit_idx.begin(); index_iter != cand_hit_idx.end(); ++index_iter){
-      const float candR = evt_lay_hits[ilayer][*index_iter].r();
-      if (candR > maxR) maxR = candR;
-    }
+    const float minR = ev.minR_[ilayer];
+    const float maxR = ev.maxR_[ilayer];
     const float deltaR = maxR - minR;
     dprint("min, max: " << minR << ", " << maxR);
     const TrackState propStateMin = propState;

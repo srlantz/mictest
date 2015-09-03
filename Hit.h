@@ -149,7 +149,7 @@ public:
 class Hit
 {
 public:
-  Hit() {}
+  Hit() : mcHitID_(HitID::MCLayerID) {}
   Hit(const MeasurementState& state) : state_(state) {}
   Hit(const SVector3& position, const SMatrixSym33& error)
     : state_(position, error) {}
@@ -201,7 +201,7 @@ private:
 
 struct MCHit : public Hit
 {
-  MCHit() {}
+  MCHit() : hitID_(HitID::MCLayerID, HitID::MCLayerID) {}
   MCHit(const Hit& hit, int track, int layer, int ithlayerhit)
     : Hit(hit), mcTrackID_(track), layer_(layer), ithLayerHit_(ithlayerhit)
       { setMCHitID(mcHitIDCounter_++); }
