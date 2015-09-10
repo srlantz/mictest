@@ -87,7 +87,7 @@ inline void sincos4(float x, float& sin, float& cos)
     #ifdef __MIC__
       #define MPT_SIZE 16
     #else
-      #define MPT_SIZE 8
+      #define MPT_SIZE 1
     #endif
   #endif
 

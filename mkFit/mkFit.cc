@@ -109,8 +109,9 @@ void initGeom(Geometry& geom)
   // NB: z is just a dummy variable, VUSolid is actually infinite in size.  *** Therefore, set it to the eta of simulation ***
   float eta = 2.0; // can tune this to whatever geometry required (one can make this layer dependent as well)
 
-  float rs[10] = {4,8,12,16,20,24,28,32,36,40};
-  //float rs[10] = {4.645119,7.056270,10.394469,23.825346,35.483938,40.386077,47.831438,58.456861,68.498828,79.933505};
+  //float rs[10] = {4,8,12,16,20,24,28,32,36,40};
+  float rs[10] = {4.42,7.31,10.17,25.65,33.81,41.89,49.67,60.95,69.11,78.19};
+  // float rs[10] = {4.645119,7.056270,10.394469,23.825346,35.483938,40.386077,47.831438,58.456861,68.498828,79.933505};
 
   for (int l = 0; l < 10; l++) {
     float r = rs[l];

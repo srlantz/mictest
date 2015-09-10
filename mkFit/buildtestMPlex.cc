@@ -1429,9 +1429,14 @@ double runBuildingTestPlex(Event& ev)
     {
       event_of_hits.InsertHit(simtracks[itrack].hitsVector(ev.layerHits_)[ilay], ilay);
 #ifdef DEBUG
+      int b1 = -1;
+      int b2 = -1;
+      Config::getBothEtaBins(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].eta(),b1,b2);
       std::cout << "track #" << itrack << " lay=" << ilay+1 << " hit pos=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].position() 
-		<< " r=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].r() << " phi=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi() 
-		<< " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()) << std::endl;
+		<< " r=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].r() 
+		<< " eta=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].eta() << " etaBin=" << Config::getEtaBin(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].eta()) << " b1=" << b1 << " b2=" << b2
+		<< " phi=" << simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi() << " phiPart=" << getPhiPartition(simtracks[itrack].hitsVector(ev.layerHits_)[ilay].phi()) 
+		<< std::endl;
 #endif
     }
   }
@@ -1637,6 +1642,8 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
        int th_n_seeds = th_end_seed-th_start_seed;
 
 #ifdef DEBUG
+       std::cout << "---------------------------" << std::endl;
+       std::cout << std::endl;
        std::cout << "ebin=" << ebin << std::endl;
        omp_set_lock(&writelock);
        if (n_th_per_eta_bin>=1)

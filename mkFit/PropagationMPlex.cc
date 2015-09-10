@@ -17,10 +17,12 @@ void propagateLineToRMPlex(const MPlexLS &psErr,  const MPlexLV& psPar,
 #pragma simd
    for (int n = 0; n < N; ++n)
    {
-      const float dr  = hipo(msPar[0 * N + n], msPar[1 * N + n]) - hipo(psPar[0 * N + n], psPar[1 * N + n]);
+
+     const float cosA = (psPar[0 * N + n] * psPar[3 * N + n] + psPar[1 * N + n] * psPar[4 * N + n]) / ( sqrt( ( psPar[0 * N + n] * psPar[0 * N + n] + psPar[1 * N + n] * psPar[1 * N + n] ) * ( psPar[3 * N + n] * psPar[3 * N + n] + psPar[4 * N + n] * psPar[4 * N + n] ) ) );
+     const float dr  = (hipo(msPar[0 * N + n], msPar[1 * N + n]) - hipo(psPar[0 * N + n], psPar[1 * N + n])) / cosA;
 
 #ifdef DEBUG
-      std::cout << "propagateLineToRMPlex dr=" << dr << std::endl;
+     std::cout << "propagateLineToRMPlex dr=" << dr << std::endl;
 #endif
 
       const float pt  = hipo(psPar[3 * N + n], psPar[4 * N + n]);

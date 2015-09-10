@@ -319,6 +319,8 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
 			    int& charge, float pt, const Geometry& geom, HitVec& initHits, MCHitInfoVec& initialhitinfo)
 {
 
+  //fixme: check also event count
+
   const float hitposerrXY = 0.01;//assume 100mum uncertainty in xy coordinate
   const float hitposerrZ = 0.1;//assume 1mm uncertainty in z coordinate
   const float hitposerrR = hitposerrXY/10.;
@@ -339,7 +341,9 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
   hits.reserve(nTotHit);
   initHits.reserve(nTotHit);
 
-  std::ifstream infile("cmssw.simtracks.txt");
+  // std::ifstream infile("cmssw.simtracks.txt");
+  std::ifstream infile("cmssw.simtracks.widebs.txt");
+  // std::ifstream infile("cmssw.onesimtrack.txt");
   std::string line;
   int countTracks = -1;
   unsigned int countHits   = 0;

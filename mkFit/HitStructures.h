@@ -27,8 +27,8 @@
 
 namespace Config
 {
-  const int g_NEvents           = 10;
-  const int g_NTracks           = 20000;
+  const int g_NEvents           = 1;//10;
+  const int g_NTracks           = 1;//20000;
   const int g_MaxHitsPerBunch   = std::max(100, g_NTracks * 2 / Config::nEtaPart);
 
   const int g_MaxCandsPerSeed   = 6;
@@ -326,7 +326,7 @@ public:
     int bin = Config::getEtaBin(seed.momEta());
     float r = seed.posR();
     if (bin != -1 && ( (Config::g_PropagateAtEnd == false && r > 11.9 && r < 12.1) || (Config::g_PropagateAtEnd == true && r > 15.9 && r < 16.1)  
-		       || (Config::g_PropagateAtEnd == true && r > 23.0 && r < 24.0) ) )//for tracks from cmssw... I guess this should become geometry-aware
+		       || (Config::g_PropagateAtEnd == true && r > 20.0 && r < 30.0) ) )//for tracks from cmssw... I guess this should become geometry-aware
       {
 	m_etabins_of_comb_candidates[bin].InsertSeed(seed);
       } 
