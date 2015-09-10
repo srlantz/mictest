@@ -1390,12 +1390,20 @@ double runBuildingTestPlexBestHit(Event& ev)
 // runBuildTestPlex
 //==============================================================================
 
+#include "L2Prefetcher.h"
+
 #ifdef TEST_CLONE_ENGINE
 double runBuildingTestPlex(Event& ev, CandCloner& cloner)
 #else
 double runBuildingTestPlex(Event& ev)
 #endif
 {
+// #if defined(__MIC__)
+//   L2Prefetcher l2_pref(-1, 3);  // Same core
+// #else
+//   L2Prefetcher l2_pref(-1, 13); // Run on same core, hyper thread
+// #endif
+
   std::vector<Track>& simtracks = ev.simTracks_;
 
   std::cout << "total simtracks=" << simtracks.size() << std::endl;
@@ -1581,10 +1589,10 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 
   //parallel section over seeds
   //int nseeds=recseeds.size();
-#pragma omp parallel num_threads(NUM_THREADS)
+//#XXXpragma omp parallel num_threads(NUM_THREADS)
    {
-     int thread_num = omp_get_thread_num();
-     int num_threads = omp_get_num_threads();
+     int thread_num  = 0; // omp_get_thread_num();
+     int num_threads = 1; // omp_get_num_threads();
 
      int n_th_per_eta_bin = num_threads/Config::nEtaBin;
      int n_eta_bin_per_th = Config::nEtaBin/num_threads;
@@ -1648,16 +1656,31 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
        cloner.begin_eta_bin(&etabin_of_comb_candidates, th_start_seed, th_n_seeds);
 #endif
 
+       // l2_pref.QueueWork(& event_of_hits.m_layers_of_hits[nhits_per_seed].m_bunches_of_hits[ebin]);
+
        //ok now we start looping over layers
        //loop over layers, starting from after the seeD
        for (int ilay = nhits_per_seed; ilay < event_of_hits.m_n_layers; ++ilay)
 	 {
+           // {
+           //   double t_0 = dtime();
+           //   l2_pref.WaitForSideThreadToFinish();
+           //   double t_1 = dtime();
+           //   printf("Waited for %f s, %f %f\n",
+           //          t_1 - t_0, t_0, t_1);
+           // }
+
+           // if (ilay + 1 < event_of_hits.m_n_layers)
+           // {
+           //   l2_pref.QueueWork(& event_of_hits.m_layers_of_hits[ilay + 1].m_bunches_of_hits[ebin]);
+           // }
+
 	   BunchOfHits &bunch_of_hits = event_of_hits.m_layers_of_hits[ilay].m_bunches_of_hits[ebin];	     
-	   
+
 #ifdef DEBUG
 	   std::cout << "processing lay=" << ilay+1 << std::endl;
 #endif
-	   
+
 	   //prepare unrolled vector to loop over
 	   std::vector<std::pair<int,int> > seed_cand_idx;
 	   for (int iseed = th_start_seed; iseed != th_end_seed; ++iseed) 
@@ -1673,8 +1696,14 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	   if (theEndCand==0) continue;
  
 #ifdef TEST_CLONE_ENGINE
-	   if (Config::g_PropagateAtEnd && ilay+1<event_of_hits.m_n_layers) cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay+1));
-	   else cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay));
+	   if (Config::g_PropagateAtEnd && ilay + 1 < event_of_hits.m_n_layers)
+           {
+             cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay+1));
+           }
+	   else
+           {
+             cloner.begin_layer(&bunch_of_hits, ilay, ev.geom_.Radius(ilay));
+           }
 #else
 	   std::vector<std::vector<Track> > tmp_candidates(th_n_seeds);
 	   for (int iseed=0;iseed<tmp_candidates.size();++iseed)

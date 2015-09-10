@@ -1096,8 +1096,8 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   {
     int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
-    _mm_prefetch(varr + off, _MM_HINT_T0);
-    _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
+    // _mm_prefetch(varr + off, _MM_HINT_T0);
+    // _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
 
     idx[it]      = off;
     // idx_chew[it] = it*sizeof(Hit);
@@ -1105,6 +1105,7 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     // XXX There is an intrinsic for that, out of loop.
     maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
+
   // XXXX MT FIXME: Use the limit for:
   // - SlurpIns, use masked gather for MIC_INTRINSICS
   // - prefetching loops - DONE
@@ -1121,6 +1122,21 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
   // This will actually be applied in SelectHitRanges now ...
   maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
+
+
+  // ZZZZ Printout counts
+  int minSize = 9999, sumSize = 0, sumWaste = 0;
+  for (int it = 0; it < N_proc; ++it)
+  {
+    int ss = std::min(XHitSize.At(it, 0, 0), Config::g_MaxHitsConsidered);
+    minSize   = std::min(minSize, ss);
+    sumSize  += ss;
+    sumWaste += maxSize - ss;
+  }
+  printf("ZZZZ: %2d %2d %2d %2d %3d %3d\n", cloner.m_layer,
+         N_proc, minSize, maxSize, sumSize, sumWaste);
+  // layer/I:N_proc:minSize:maxSize:sumSize:sumWaste
+
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
@@ -1139,11 +1155,11 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
 
     // Prefetch to L2 the hits we'll process after two loops iterations.
     // Ideally this would be initiated before coming here, for whole bunch_of_hits.m_hits vector.
-    for (int itrack = 0; itrack < N_proc; ++itrack)
-    {
-      if (hit_cnt + 2 < XHitSize.At(itrack, 0, 0))
-        _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
-    }
+    // for (int itrack = 0; itrack < N_proc; ++itrack)
+    // {
+    //   if (hit_cnt + 2 < XHitSize.At(itrack, 0, 0))
+    //     _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
+    // }
 
 #if defined(MIC_INTRINSICS)
     msErr[Nhits].SlurpIn(varr + off_error, vi);
@@ -1171,11 +1187,11 @@ void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner
     computeChi2MPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], outChi2);
 
     // Prefetch to L1 the hits we'll process in the next loop iteration.
-    for (int itrack = 0; itrack < N_proc; ++itrack)
-    {
-      if (hit_cnt + 1 < XHitSize.At(itrack, 0, 0))
-        _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
-    }
+    // for (int itrack = 0; itrack < N_proc; ++itrack)
+    // {
+    //   if (hit_cnt + 1 < XHitSize.At(itrack, 0, 0))
+    //     _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
+    // }
 
 #pragma simd // DOES NOT VECTORIZE AS IT IS NOW
     for (int itrack = 0; itrack < N_proc; ++itrack)

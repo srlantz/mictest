@@ -158,8 +158,8 @@ void test_standard()
 
 #ifdef TEST_CLONE_ENGINE
 #if defined(__MIC__)
-  // CandCloner cloner(1, 2);  // Same core
-  CandCloner cloner(1, 5);  // Another cpu
+  CandCloner cloner(1, 2);  // Same core
+  // CandCloner cloner(1, 5);  // Another cpu
 #else
   // CandCloner cloner(8, 20); // Same core
   CandCloner cloner(1, 2);  // Same socket, another core
