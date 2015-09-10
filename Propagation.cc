@@ -14,9 +14,9 @@ TrackState propagateLineToR(const TrackState& inputState, float r) {
   const SMatrixSym66& err = inputState.errors;
 
   //straight line for now
-  float r0 = sqrt(par.At(0)*par.At(0)+par.At(1)*par.At(1));
+  float r0 = std::sqrt(par.At(0)*par.At(0)+par.At(1)*par.At(1));
   float dr = r-r0;
-  float pt = sqrt(par.At(3)*par.At(3)+par.At(4)*par.At(4));
+  float pt = std::sqrt(par.At(3)*par.At(3)+par.At(4)*par.At(4));
   float path = dr/pt;//this works only if direction is along radius, i.e. origin is at (0,0)
 
   TrackState result;
@@ -29,7 +29,7 @@ TrackState propagateLineToR(const TrackState& inputState, float r) {
   result.parameters=propMatrix*par;
   dprint("initial R=" << r0 << std::endl << "target R=" << r << std::endl
                       << "arrived at R="
-                      << sqrt(result.parameters[0]*result.parameters[0]+result.parameters[1]*result.parameters[1]));
+                      << std::sqrt(result.parameters[0]*result.parameters[0]+result.parameters[1]*result.parameters[1]));
 
   result.errors=ROOT::Math::Similarity(propMatrix,err);
   return result;
@@ -48,14 +48,14 @@ struct HelixState {
     px = par.At(3);
     py = par.At(4);
     pz = par.At(5);
-    r0 = sqrt(x*x+y*y);
+    r0 = std::sqrt(x*x+y*y);
   }
 
   void setHelixPar(const TrackState& s) {
     charge = s.charge;
 
     pt2 = px*px+py*py;
-    pt = sqrt(pt2);
+    pt = std::sqrt(pt2);
     pt3 = pt*pt2;
 
     //p=0.3Br => r=p/(0.3*B)
@@ -147,7 +147,7 @@ void HelixState::propagateErrors(const HelixState& in, float totalDistance, bool
 
 #ifdef DEBUG
   SVector6& par = state.parameters;
-  dprint("TD=" << TD << " TP=" << TP << " arrived at r=" << sqrt(par.At(0)*par.At(0)+par.At(1)*par.At(1)));
+  dprint("TD=" << TD << " TP=" << TP << " arrived at r=" << std::sqrt(par.At(0)*par.At(0)+par.At(1)*par.At(1)));
 #endif
 
   const float dCdpx = k*in.px/pt;
@@ -433,7 +433,7 @@ TrackState propagateHelixToR_test(TrackState& inputState, float r) {
   float pzin = inputState.parameters.At(5);
 
   float pt2 = pxin*pxin+pyin*pyin;
-  float pt = sqrt(pt2);
+  float pt = std::sqrt(pt2);
   float pt3 = pt*pt2;
   //p=0.3Br => r=p/(0.3*B)
   float k=charge*100./(-0.299792458*3.8);

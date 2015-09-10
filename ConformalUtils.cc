@@ -35,7 +35,7 @@ void conformalFit(const Hit& hit0, const Hit& hit1, const Hit& hit2, int charge,
 
   float b=1./(2.*C[0]);
   float a=b*C[1];
-  float R=sqrt((x[0]-a)*(x[0]-a)+(y[0]-b)*(y[0]-b));
+  float R=std::sqrt((x[0]-a)*(x[0]-a)+(y[0]-b)*(y[0]-b));
   //float e=b*b*b*C[2]/(R*R*R);
 
   float k=charge*100./(-0.299792458*3.8);
@@ -59,11 +59,11 @@ void conformalFit(const Hit& hit0, const Hit& hit1, const Hit& hit2, int charge,
   float vrx = x[0]-a;
   float vry = y[0]-b;
   float phi = atan2(vrx,vry);
-  float px = fabs(pt*cos(phi))*((x[1]-x[0])>0. ? 1. : -1.);
-  float py = fabs(pt*sin(phi))*((y[1]-y[0])>0. ? 1. : -1.);
+  float px = std::abs(pt*cos(phi))*((x[1]-x[0])>0. ? 1. : -1.);
+  float py = std::abs(pt*sin(phi))*((y[1]-y[0])>0. ? 1. : -1.);
   //compute theta
-  float tantheta = sqrt((x[0]-x[2])*(x[0]-x[2])+(y[0]-y[2])*(y[0]-y[2]))/(z[2]-z[0]);
-  float pz = fabs(pt/tantheta)*((z[1]-z[0])>0. ? 1. : -1.);
+  float tantheta = std::sqrt((x[0]-x[2])*(x[0]-x[2])+(y[0]-y[2])*(y[0]-y[2]))/(z[2]-z[0]);
+  float pz = std::abs(pt/tantheta)*((z[1]-z[0])>0. ? 1. : -1.);
   if (backward) {
     px*=-1.;
     py*=-1.;

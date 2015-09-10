@@ -48,7 +48,7 @@ inline double dtime()
 
 inline float hipo(float x, float y)
 {
-   return sqrt(x*x + y*y);
+   return std::sqrt(x*x + y*y);
 }
 
 inline void sincos4(float x, float& sin, float& cos)

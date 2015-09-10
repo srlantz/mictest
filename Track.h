@@ -15,6 +15,7 @@ public:
   SMatrixSym66 errors;
   int8_t charge;
   bool valid;
+  float r() const { return std::sqrt(parameters[0]*parameters[0] + parameters[1]*parameters[1]); }
 };
 
 class Track

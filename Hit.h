@@ -42,7 +42,7 @@ inline int getEtaBin(float eta)
   using namespace Config;
 
   //in this case we are out of bounds
-  if (fabs(eta)>fEtaDet) return -1;
+  if (std::abs(eta)>fEtaDet) return -1;
 
   //first and last bin have extra width
   if (eta<(lEtaBin-fEtaDet)) return 0;
@@ -115,7 +115,7 @@ inline float getEta(float x, float y, float z)
 
 inline float getHypot(float x, float y)
 {
-  return sqrtf(x*x + y*y);
+  return std::sqrt(x*x + y*y);
 }
 
 inline unsigned int binNumber(unsigned int etaPart, unsigned int phiPart)
@@ -167,8 +167,8 @@ public:
   SMatrixSym33& error_nc()      {return state_.errors;}
 
   float r() const {
-    return sqrt(state_.parameters.At(0)*state_.parameters.At(0) +
-                state_.parameters.At(1)*state_.parameters.At(1));
+    return std::sqrt(state_.parameters.At(0)*state_.parameters.At(0) +
+                     state_.parameters.At(1)*state_.parameters.At(1));
   }
   float x() const {
     return state_.parameters.At(0);

@@ -4,6 +4,7 @@
 #include "Propagation.h"
 #include "Simulation.h"
 #include "Event.h"
+//#define DEBUG
 #include "Debug.h"
 
 #include <cmath>
@@ -26,7 +27,10 @@ static std::mutex evtlock;
 #endif
 typedef candvec::const_iterator canditer;
 
-void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidates, unsigned int ilay, bool debug);
+void projectTrack(const Event& ev, unsigned int ilay, cand_t& track, TrackState& outer_state);
+void findCandidateHits(const Event& ev, unsigned int ilayer, const cand_t& track, HitIDVec& cand_hits);
+bool extendCandidate(const Event& ev, const HitID& hitid, const cand_t& track, const TrackState& outer_state,
+                     cand_t& newtrack);
 
 inline float normalizedPhi(float phi) {
   return std::fmod(phi, (float) M_PI);
@@ -52,7 +56,7 @@ void processCandidates(Event& ev, const Track& seed, candvec& candidates, unsign
 {
   auto& evt_track_candidates(ev.candidateTracks_);
 
-  dprint("processing seed # " << seed.SimTrackIDInfo().first << " par=" << seed.parameters() << " candidates=" << candidates.size());
+  dprint("processing seed par=" << seed.parameters() << " candidates=" << candidates.size());
 
   candvec tmp_candidates;
   tmp_candidates.reserve(3*candidates.size()/2);
@@ -60,7 +64,16 @@ void processCandidates(Event& ev, const Track& seed, candvec& candidates, unsign
   if (candidates.size() > 0) {
     //loop over running candidates
     for (auto&& cand : candidates) {
-      extendCandidate(ev, cand, tmp_candidates, ilay, debug);
+      TrackState outer_state;
+      projectTrack(ev, ilay, cand, outer_state);
+      HitIDVec cand_hits;
+      findCandidateHits(ev, ilay, cand, cand_hits);
+      for (auto&& hitid : cand_hits) {
+        Track newtrack;
+        if (extendCandidate(ev, hitid, cand, outer_state, newtrack)) {
+          tmp_candidates.push_back(newtrack);
+        }
+      }
     }
 
     ev.validation_.fillBuildHists(ilay, tmp_candidates.size(), candidates.size());
@@ -108,7 +121,7 @@ void buildTracksBySeeds(Event& ev)
     for (auto iseed = 0U; iseed != evt_seeds.size(); ++iseed) {
       const auto& seed(evt_seeds[iseed]);
 #endif
-      dprint("processing seed # " << seed.SimTrackIDInfo().first << " par=" << seed.parameters());
+      dprint("processing seed par=" << seed.parameters());
       TrackState seed_state = seed.state();
       //seed_state.errors *= 0.01;//otherwise combinatorics explode!!!
       //should consider more than 1 candidate...
@@ -180,36 +193,29 @@ void buildTracksByLayers(Event& ev)
   }
 }
 
-void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidates, unsigned int ilayer,
-                     bool debug)
+void projectTrack(const Event& ev, unsigned int ilay, cand_t& track, TrackState& outer_state)
 {
-  const Track& tkcand = cand;
-  const TrackState& updatedState = cand.state();
-  const auto& evt_lay_hits(ev.layerHits_);
-  const auto& segmentMap(ev.segmentMap_);
-  //  debug = true;
+  track.setState(propagateHelixToR(track.state(), ev.minR_[ilay]));
+  outer_state = propagateHelixToR(track.state(), ev.maxR_[ilay]);
+}
 
-  dprint("processing candidate with nHits=" << tkcand.nHits());
-#ifdef LINEARINTERP
-  TrackState propState = propagateHelixToR(updatedState,ev.geom_.Radius(ilayer));
-#else
-#ifdef TBB
-#error "Invalid combination of options (thread safety)"
+void findCandidateHits(const Event& ev, unsigned int ilayer, const cand_t& track, HitIDVec& cand_hits)
+{
+  const auto& propState = track.state();
+  const auto& segmentMap(ev.segmentMap_[ilayer]);
+#ifdef DEBUG
+  bool debug(false);
 #endif
-  TrackState propState = propagateHelixToLayer(updatedState,ilayer,ev.geom_);
-#endif // LINEARINTERP
-#ifdef CHECKSTATEVALID
-  if (!propState.valid) {
-    return;
-  }
-#endif
+
+  dprint("processing candidate with nHits=" << track.nHits());
+
   const float predx = propState.parameters.At(0);
   const float predy = propState.parameters.At(1);
   const float predz = propState.parameters.At(2);
   const float px2py2 = predx*predx+predy*predy; // predicted radius^2
 #ifdef DEBUG
   if (debug) {
-    std::cout << "propState at hit#" << ilayer << " r/phi/z : " << sqrt(pow(predx,2)+pow(predy,2)) << " "
+    std::cout << "propState at hit#" << ilayer << " r/phi/z : " << std::sqrt(pow(predx,2)+pow(predy,2)) << " "
               << std::atan2(predy,predx) << " " << predz << std::endl;
     dumpMatrix(propState.errors);
   }
@@ -218,16 +224,16 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
 #ifdef ETASEG  
   const float eta = getEta(predx,predy,predz);
   const float pz2 = predz*predz;
-  const float detadx = -predx/(px2py2*sqrt(1+(px2py2/pz2)));
-  const float detady = -predy/(px2py2*sqrt(1+(px2py2/pz2)));
-  const float detadz = 1.0/(predz*sqrt(1+(px2py2/pz2)));
+  const float detadx = -predx/(px2py2*std::sqrt(1+(px2py2/pz2)));
+  const float detady = -predy/(px2py2*std::sqrt(1+(px2py2/pz2)));
+  const float detadz = 1.0/(predz*std::sqrt(1+(px2py2/pz2)));
   const float deta2  = detadx*detadx*(propState.errors.At(0,0)) +
-    detady*detady*(propState.errors.At(1,1)) +
-    detadz*detadz*(propState.errors.At(2,2)) +
-    2*detadx*detady*(propState.errors.At(0,1)) +
-    2*detadx*detadz*(propState.errors.At(0,2)) +
-    2*detady*detadz*(propState.errors.At(1,2));
-  const float deta   = sqrt(std::abs(deta2));  
+     detady*detady*(propState.errors.At(1,1)) +
+     detadz*detadz*(propState.errors.At(2,2)) +
+     2*detadx*detady*(propState.errors.At(0,1)) +
+     2*detadx*detadz*(propState.errors.At(0,2)) +
+     2*detady*detadz*(propState.errors.At(1,2));
+  const float deta   = std::sqrt(std::abs(deta2));  
   const float nSigmaDeta = std::min(std::max(Config::nSigma*deta,(float)0.0),float( 1.0)); // something to tune -- minDEta = 0.0
 
   //for now as well --> eta boundary!!!
@@ -250,10 +256,10 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
   const float dphidx = -predy/px2py2;
   const float dphidy =  predx/px2py2;
   const float dphi2  = dphidx*dphidx*(propState.errors.At(0,0)) +
-    dphidy*dphidy*(propState.errors.At(1,1)) +
-    2*dphidx*dphidy*(propState.errors.At(0,1));
+     dphidy*dphidy*(propState.errors.At(1,1)) +
+     2*dphidx*dphidy*(propState.errors.At(0,1));
   
-  const float dphi   =  sqrt(std::abs(dphi2));//how come I get negative squared errors sometimes?
+  const float dphi   =  std::sqrt(std::abs(dphi2));//how come I get negative squared errors sometimes?
   const float nSigmaDphi = std::min(std::max(Config::nSigma*dphi,(float) Config::minDPhi), (float) M_PI);
   
   const float dphiMinus = normalizedPhi(phi-nSigmaDphi);
@@ -264,12 +270,12 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
 
   dprint("phi: " << phi << " phiBinMinus: " <<  phiBinMinus << " phiBinPlus: " << phiBinPlus << "  dphi2: " << dphi2);
   
+  std::vector<unsigned int> cand_hit_idx;
   for (unsigned int ieta = etaBinMinus; ieta <= etaBinPlus; ++ieta){
     
-    const BinInfo binInfoMinus = segmentMap[ilayer][ieta][int(phiBinMinus)];
-    const BinInfo binInfoPlus  = segmentMap[ilayer][ieta][int(phiBinPlus)];
+    const BinInfo binInfoMinus = segmentMap[ieta][int(phiBinMinus)];
+    const BinInfo binInfoPlus  = segmentMap[ieta][int(phiBinPlus)];
     
-    std::vector<unsigned int> cand_hit_idx;
     std::vector<unsigned int>::iterator index_iter; // iterator for vector
     
     // Branch here from wrapping
@@ -280,64 +286,59 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
       for (auto ihit  = firstIndex; ihit < maxIndex; ++ihit){
         cand_hit_idx.push_back(ihit);
       }
-    } 
-    else { // loop wrap around end of array for phiBinMinus > phiBinPlus, for dPhiMinus < 0 or dPhiPlus > 0 at initialization
+    } else { // loop wrap around end of array for phiBinMinus > phiBinPlus, for dPhiMinus < 0 or dPhiPlus > 0 at initialization
       const auto firstIndex = binInfoMinus.first;
-      const auto etaBinSize = segmentMap[ilayer][ieta][Config::nPhiPart-1].first+segmentMap[ilayer][ieta][Config::nPhiPart-1].second;
+      const auto etaBinSize = segmentMap[ieta][Config::nPhiPart-1].first+segmentMap[ieta][Config::nPhiPart-1].second;
 
       for (auto ihit  = firstIndex; ihit < etaBinSize; ++ihit){
         cand_hit_idx.push_back(ihit);
       }
 
-      const auto etaBinStart= segmentMap[ilayer][ieta][0].first;
+      const auto etaBinStart= segmentMap[ieta][0].first;
       const auto maxIndex   = binInfoPlus.first+binInfoPlus.second;
 
       for (unsigned int ihit  = etaBinStart; ihit < maxIndex; ++ihit){
         cand_hit_idx.push_back(ihit);
       }
     }
-  
-#ifdef LINEARINTERP
-    const float minR = ev.minR_[ilayer];
-    const float maxR = ev.maxR_[ilayer];
-    const float deltaR = maxR - minR;
-    dprint("min, max: " << minR << ", " << maxR);
-    const TrackState propStateMin = propState;
-    const TrackState propStateMax = propagateHelixToR(updatedState,maxR);
-#ifdef CHECKSTATEVALID
-    if (!propStateMax.valid) {
-      return;
-    }
-#endif
-#endif
-    
-    for(index_iter = cand_hit_idx.begin(); index_iter != cand_hit_idx.end(); ++index_iter){
-      const Hit hitCand = evt_lay_hits[ilayer][*index_iter];
-      const MeasurementState hitMeas = hitCand.measurementState();
-
-#ifdef LINEARINTERP
-      const float ratio = (hitCand.r() - minR)/deltaR;
-      propState.parameters = (1.0-ratio)*propStateMin.parameters + ratio*propStateMax.parameters;
-      dprint(std::endl << ratio << std::endl << propStateMin.parameters << std::endl << propState.parameters << std::endl
-                       << propStateMax.parameters << std::endl << propStateMax.parameters - propStateMin.parameters
-                       << std::endl << std::endl << hitMeas.parameters);
-#endif
-      const float chi2 = computeChi2(propState,hitMeas);
-    
-      if ((chi2<Config::chi2Cut)&&(chi2>0.)) {//fixme 
-        dprint("found hit with index: " << *index_iter << " chi2=" << chi2);
-        const TrackState tmpUpdatedState = updateParameters(propState, hitMeas);
-        Track tmpCand(tmpUpdatedState,tkcand.hitIDs(),tkcand.chi2()); //= tkcand.clone();
-        tmpCand.addHit(HitID(ilayer, *index_iter),chi2);
-        tmp_candidates.push_back(tmpCand);
-      }
-    }//end of consider hits on layer loop
-    
   }//end of eta loop
+  for (auto ihit : cand_hit_idx) {
+    cand_hits.push_back(HitID(ilayer,ihit));
+  }
+}
 
-  //add also the candidate for no hit found
-  if (tkcand.nHits()==ilayer) {//only if this is the first missing hit
-    dprint("adding candidate with no hit");
-    tmp_candidates.push_back(tkcand);
+bool extendCandidate(const Event& ev, const HitID& hitid, const cand_t& track, const TrackState& outer_state,
+                     cand_t& newtrack)
+{
+  const auto& hitCand = ev.HitFromID(hitid);
+  const auto& hitMeas = hitCand.measurementState();
+  const auto& propStateMin = track.state();
+  const auto& propStateMax = outer_state;
+  TrackState propState;
+#ifdef DEBUG
+  bool debug(false);
+#endif
+
+  const auto minR = propStateMin.r();
+  const auto deltaR = propStateMax.r() - minR;
+  const auto ratio = (hitCand.r() - minR)/deltaR;
+  propState.parameters = (1.0-ratio)*propStateMin.parameters + ratio*propStateMax.parameters;
+  propState.errors = (1.0-ratio)*propStateMin.errors + ratio*propStateMax.errors;
+  propState.charge = propStateMin.charge;
+  propState.valid = propStateMin.valid;
+  dprint("Interpolation ratio " << ratio << std::endl << propState.parameters);
+
+  const float chi2 = computeChi2(propState,hitMeas);
+
+  if ((chi2<Config::chi2Cut)&&(chi2>0.)) {//fixme 
+    dprint("found hit with mcHitID: " << hitCand.mcHitID() << " chi2=" << chi2);
+    propState = updateParameters(propState, hitMeas);
+    newtrack = Track(propState,track.hitIDs(),track.chi2());
+    newtrack.addHit(hitid,chi2);
+    return true;
+  } else {
+    return false; // FIXME
+    //propState.valid = false;
+    //hit.hitid_.layer_ = HitID::MCLayerID; // missing hit marker
   }
 }
