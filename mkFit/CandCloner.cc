@@ -69,6 +69,14 @@ void CandCloner::CutAndPastaFromBuildTestMPlex()
 
       //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
       //also fill the temp vector of candidates
+#ifdef DEBUG
+	EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+	MkFitter *mkfp = m_fitter;
+	int ilay = m_layer;
+	
+	std::cout << "before update x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1))
+		  << " px=" << mkfp->getPar(0, 1, 3) << " py=" << mkfp->getPar(0, 1, 4) << " pz=" << mkfp->getPar(0, 1, 5) << " pT=" << getHypot(mkfp->getPar(0, 1, 3), mkfp->getPar(0, 1, 4)) << std::endl;
+#endif
       m_fitter->UpdateWithHit(*mp_bunch_of_hits, seed_newcand_idx, itrack, end);
 
       if (m_layer!=9) 
@@ -199,6 +207,14 @@ void CandCloner::ProcessSeedRange(int is_beg, int is_end)
       
       //now we need to update with the hit in bunch_of_hits.m_hits[ hitsToAddForThisSeed[ih].hitIdx ]
       //also fill the temp vector of candidates
+#ifdef DEBUG
+	EtaBinOfCombCandidates &etabin_of_comb_candidates = *mp_etabin_of_comb_candidates;
+	MkFitter *mkfp = m_fitter;
+	int ilay = m_layer;
+	
+	std::cout << "before update x=" << mkfp->getPar(0, 1, 0) << " y=" << mkfp->getPar(0, 1, 1) << " z=" << mkfp->getPar(0, 1, 2)<< " r=" << getHypot(mkfp->getPar(0, 1, 0), mkfp->getPar(0, 1, 1))
+		  << " px=" << mkfp->getPar(0, 1, 3) << " py=" << mkfp->getPar(0, 1, 4) << " pz=" << mkfp->getPar(0, 1, 5) << " pT=" << getHypot(mkfp->getPar(0, 1, 3), mkfp->getPar(0, 1, 4)) << std::endl;
+#endif
       m_fitter->UpdateWithHit(*mp_bunch_of_hits, t_seed_newcand_idx, itrack, end);
       
       if (m_layer!=9) 
