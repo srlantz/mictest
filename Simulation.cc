@@ -341,9 +341,9 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
   hits.reserve(nTotHit);
   initHits.reserve(nTotHit);
 
+  // std::ifstream infile("cmssw.onesimtrack.txt");
   // std::ifstream infile("cmssw.simtracks.txt");
   std::ifstream infile("cmssw.simtracks.widebs.txt");
-  // std::ifstream infile("cmssw.onesimtrack.txt");
   std::string line;
   int countTracks = -1;
   unsigned int countHits   = 0;
@@ -365,7 +365,7 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
       int q;
       iss >> x >> y >> z >> px >> py >> pz >> q;
 
-      pos=SVector3(x,y,x);
+      pos=SVector3(x,y,z);
       charge = q;
       mom=SVector3(px,py,pz);
       covtrk=ROOT::Math::SMatrixIdentity();
