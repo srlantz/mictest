@@ -201,22 +201,29 @@ void MkFitter::FitTracks()
     // propagateLineToRMPlex(Err[iC], Par[iC], msErr[hi], msPar[hi],
     //                       Err[iP], Par[iP]);
 
+// #ifdef DEBUG
+//     std::cout << "track fit before hit #" << hi 
+// 	      << " has start pos=" << Par[iC].At(0, 0, 0) << " , " << Par[iC].At(0, 1, 0) << " , " << Par[iC].At(0, 2, 0) 
+// 	      << " mom=" << Par[iC].At(0, 3, 0) << " , " << Par[iC].At(0, 4, 0) << " , " << Par[iC].At(0, 5, 0) 
+// 	      << std::endl;
+// #endif
+
     propagateHelixToRMPlex(Err[iC], Par[iC], Chg, msPar[hi],
                            Err[iP], Par[iP]);
 
-#ifdef DEBUG
-    std::cout << "track fit at hit #" << hi 
-	      << " has prop pos=" << Par[iP].At(0, 0, 0) << " , " << Par[iP].At(0, 1, 0) << " , " << Par[iP].At(0, 2, 0) 
-	      << " and hit pos=" << msPar[hi].At(0, 0, 0) << " , " << msPar[hi].At(0, 1, 0) << " , " << msPar[hi].At(0, 2, 0) 
-	      << std::endl;
-#endif
+// #ifdef DEBUG
+//     std::cout << "track fit at hit #" << hi 
+// 	      << " has prop pos=" << Par[iP].At(0, 0, 0) << " , " << Par[iP].At(0, 1, 0) << " , " << Par[iP].At(0, 2, 0) 
+// 	      << " and hit pos=" << msPar[hi].At(0, 0, 0) << " , " << msPar[hi].At(0, 1, 0) << " , " << msPar[hi].At(0, 2, 0) 
+// 	      << std::endl;
+// #endif
 
     updateParametersMPlex(Err[iP], Par[iP], Chg, msErr[hi], msPar[hi],
                           Err[iC], Par[iC]);
 
-#ifdef DEBUG
-    std::cout << "track fit after hit #" << hi << " has pt=" << hipo(Par[iC].At(0, 3, 0),Par[iC].At(0, 4, 0)) << std::endl;
-#endif
+// #ifdef DEBUG
+//     std::cout << "track fit after hit #" << hi << " has pt=" << hipo(Par[iC].At(0, 3, 0),Par[iC].At(0, 4, 0)) << std::endl;
+// #endif
 
   }
 
@@ -1396,7 +1403,7 @@ void MkFitter::CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
       }
 #ifdef DEBUG
       std::cout << "copy out clone with updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] 
-		<< " pT=" << newcand.pT() << " invalidHits=" << newcand.nTotalHits()-newcand.nFoundHits()
+		<< " pT=" << newcand.pT() << " nTotalHits=" << newcand.nTotalHits() << " nFoundHits=" << newcand.nFoundHits()
 		<< std::endl;
 #endif
 
