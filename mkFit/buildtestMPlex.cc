@@ -1411,7 +1411,7 @@ double runBuildingTestPlex(Event& ev)
   //dump sim tracks
   for (int itrack=0;itrack<simtracks.size();++itrack) {
     Track track = simtracks[itrack];
-    std::cout << "MX - simtrack with nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
+    std::cout << "MX - simtrack with label=" << track.label() << " nTotalHits=" << track.nTotalHits() << " chi2=" << track.chi2()  << " pT=" << sqrt(track.momentum()[0]*track.momentum()[0]+track.momentum()[1]*track.momentum()[1]) <<" phi="<< track.momPhi() <<" eta=" << track.momEta() << std::endl;
   }
 #endif
 
@@ -1540,7 +1540,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
   for (int iseed=0;iseed<recseeds.size();++iseed)
   {
     Track& seed = recseeds[iseed];
-    std::cout << "MX - found seed with nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
+    std::cout << "MX - found seed with label=" << seed.label() << " nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() << " posEta=" << seed.posEta() << " posPhi=" << seed.posPhi() << " posR=" << seed.posR() << " pT=" << seed.pT() << std::endl;
   }
 #endif
 
@@ -1564,7 +1564,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
     for (int iseed = 0; iseed < etabin_of_comb_candidates.m_fill_index; iseed++)
     {
       Track& seed = etabin_of_comb_candidates.m_candidates[iseed].front();
-      std::cout << "MX - found seed with nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() 
+      std::cout << "MX - found seed with label=" << seed.label() << " nFoundHits=" << seed.nFoundHits() << " chi2=" << seed.chi2() 
                 << " x=" << seed.position()[0] << " y=" << seed.position()[1] << " z=" << seed.position()[2] 
                 << " px=" << seed.momentum()[0] << " py=" << seed.momentum()[1] << " pz=" << seed.momentum()[2] 
                 << " pT=" << sqrt(seed.momentum()[0]*seed.momentum()[0]+seed.momentum()[1]*seed.momentum()[1]) 
@@ -1703,11 +1703,21 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 	       int end = std::min(itrack + NN, theEndCand);
 	       
 #ifdef DEBUG
-	       std::cout << "processing track=" << itrack << std::endl;
+	       std::cout << "processing track=" << itrack 
+			 << " with seed label=" << etabin_of_comb_candidates.m_candidates[seed_cand_idx[itrack].first][seed_cand_idx[itrack].second].label() 
+			 << " nTotalHits=" << etabin_of_comb_candidates.m_candidates[seed_cand_idx[itrack].first][seed_cand_idx[itrack].second].nTotalHits()
+			 << " nFoundHits=" << etabin_of_comb_candidates.m_candidates[seed_cand_idx[itrack].first][seed_cand_idx[itrack].second].nFoundHits()
+			 << std::endl;
 #endif
 	       
 	       MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
 	       
+	       //hack to avoid problems of non inizialized hit counters 
+	       //(this happens because in case no new candidates are found there is no swap and the input candidates for the previous layer are used again)
+	       //fixme in CandCloner...
+	       Track& candidate = etabin_of_comb_candidates.m_candidates[seed_cand_idx[itrack].first][seed_cand_idx[itrack].second];
+	       if (candidate.nTotalHits()!=ilay) candidate.addHitIdx(-1,0.);
+
 	       mkfp->SetNhits(ilay);//here again assuming one hit per layer
 
 	       if (Config::g_PropagateAtEnd) {
@@ -1889,7 +1899,7 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
          std::cout << "MXFC - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
 #ifdef DEBUG
-         std::cout << "MXFC - found track with nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
+         std::cout << "MXFC - found track with label=" << tkcand.label() << " nFoundHits=" << tkcand.nFoundHits() << " chi2=" << tkcand.chi2() << " pT=" << pt <<" pTmc="<< ptmc << std::endl;
 #endif
        }
      }
