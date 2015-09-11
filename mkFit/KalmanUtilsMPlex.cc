@@ -209,6 +209,15 @@ void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MP
 
 #ifdef DEBUG
   if (dump) {
+    MPlexHV measPar = msPar;
+    printf("measPar:\n");
+    for (int i = 0; i < 3; ++i) { 
+      printf("%8f ", measPar.At(0,i,0)); printf("\n");
+    } printf("\n");
+    printf("propPar:\n");
+    for (int i = 0; i < 6; ++i) { 
+      printf("%8f ", propPar.At(0,i,0)); printf("\n");
+    } printf("\n");
     printf("propErr:\n");
     for (int i = 0; i < 6; ++i) { for (int j = 0; j < 6; ++j)
         printf("%8f ", propErr.At(0,i,j)); printf("\n");
