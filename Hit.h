@@ -13,9 +13,9 @@ namespace Config
   static constexpr float    PI = 3.14159265358979323846;
   static constexpr float TwoPI = 6.28318530717958647692;
   
-  static constexpr const int   nPhiPart   = 80; // 63;
-  static constexpr const float nPhiFactor = nPhiPart / TwoPI;
-  static constexpr const int   nEtaPart   = 11; // 10;
+  static constexpr int   nPhiPart   = 1260; // 63;
+  static constexpr float nPhiFactor = nPhiPart / TwoPI;
+  static constexpr int   nEtaPart   = 11; // 10;
 
   static const int   nEtaBin   = 2*nEtaPart - 1;
   static const float fEtaDet   = 1;
@@ -36,6 +36,16 @@ namespace Config
 // Anyway, it doesn't matter ... as with wide vertex region this eta binning
 // won't make much sense -- will have to be done differently for different
 // track orgin hypotheses. In about a year or so.
+
+inline float normalizedPhi(float phi)
+{
+  // Return phi between -pi and +pi.
+  //   return std::fmod(phi, (float) M_PI);
+
+  while ( phi < -Config::PI ) phi += Config::TwoPI;
+  while ( phi >  Config::PI ) phi -= Config::TwoPI;
+  return phi;
+}
 
 inline int getEtaBin(float eta)
 {
@@ -141,9 +151,9 @@ struct MeasurementState
 public:
   MeasurementState() {}
   MeasurementState(const SVector3& p, const SMatrixSym33& e)
-    : parameters(p), errors(e) {}
-  SVector3 parameters;
+    : errors(e), parameters(p) {}
   SMatrixSym33 errors;
+  SVector3 parameters;
 };
 
 class Hit
@@ -161,6 +171,9 @@ public:
   const SVector3&     position()   const {return state_.parameters;}
   const SVector3&     parameters() const {return state_.parameters;}
   const SMatrixSym33& error()      const {return state_.errors;}
+
+  const float* posArray() const {return state_.parameters.Array();}
+  const float* errArray() const {return state_.errors.Array();}
 
   // Non-const versions needed for CopyOut of Matriplex.
   SVector3&     parameters_nc() {return state_.parameters;}

@@ -40,9 +40,16 @@ public:
     state_.valid = true;
   }
   Track(TrackState state, float chi2) :
-    state_(state),
-    chi2_(chi2)
-  {}
+    state_(state), chi2_(chi2) {}
+  Track(const TrackState& state, float chi2, int label, int nHits, const HitIDVec& hitIDs) :
+      state_(state),
+      chi2_(chi2),
+      label_(label)
+  {
+    for (auto&& h : hitIDs) {
+      addHit(h,0.);
+    }
+  }
   
   ~Track(){}
 
@@ -60,6 +67,7 @@ public:
 
   int8_t   charge() const {return state_.charge;}
   float    chi2()   const {return chi2_;}
+  int      label()  const {return label_;}
 
   float posPhi() const { return getPhi(state_.parameters[0],state_.parameters[1]); }
   float momPhi() const { return getPhi(state_.parameters[3],state_.parameters[4]); }
@@ -74,10 +82,14 @@ public:
   void addHit(HitID hitID,float chi2) {hitIDs_.push_back(hitID);chi2_+=chi2;}
   void resetHits() { hitIDs_.clear(); }
   int  nHits()   const { return hitIDs_.size(); }
+  HitID getHitIdx(int hi) { return hitIDs_[hi]; }
+  int nFoundHits() const { return hitIDs_.size(); } // fixme
+  int nTotalHits() const { return hitIDs_.size(); } // fixme
 
   void setCharge(int8_t chg)  {state_.charge=chg;}
   void setChi2(float chi2) {chi2_=chi2;}
 
+  void setLabel(int lbl)   {label_=lbl;}
   void setState(TrackState newState) {state_=newState;}
 
   Track clone() const {return Track(state_,hitIDs_,chi2_);}
@@ -90,6 +102,7 @@ private:
   TrackState state_;
   HitIDVec hitIDs_;
   float chi2_;
+  int label_ = -1;
 };
 
 typedef std::vector<Track> TrackVec;

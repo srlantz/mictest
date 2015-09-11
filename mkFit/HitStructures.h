@@ -1,4 +1,8 @@
+#ifndef HitStructures_H
+#define HitStructures_H
+
 #include "Hit.h"
+#include "Track.h"
 
 // for each layer
 //   Config::nEtaBin vectors of hits, resized to large enough N
@@ -32,6 +36,10 @@ namespace Config
   // Effective eta bin is one half of nEtaPart -- so the above is twice the "average".
   // Note that last and first bin are 3/4 nEtaPart ... but can be made 1/4 by adding
   // additional bins on each end.
+
+  const int g_MaxHitsConsidered = 25;
+
+  const bool g_PropagateAtEnd = true;
 }
 
 typedef std::pair<int, int> PhiBinInfo_t;
@@ -76,16 +84,7 @@ public:
     _mm_free(m_hits);
   }
   
-  void Reset()
-  {
-    for (auto &bi : m_phi_bin_infos)
-    {
-      bi.first  = -1;
-      bi.second =  0;
-    }
-
-    m_fill_index = 0;
-  }
+  void Reset();
 
   void InsertHit(const Hit& hit)
   {
@@ -95,30 +94,7 @@ public:
     ++m_fill_index;
   }
 
-  void SortByPhiBuildPhiBins()
-  {
-    // std::sort(m_hits.begin(), m_hits.begin() + m_fill_index, sortByPhiMT);
-    std::sort(&m_hits[0], &m_hits[m_fill_index], sortHitsByPhiMT);
-
-    int last_bin = -1;
-    int idx      =  0;
-    for (int i = 0; i < m_fill_index; ++i)
-    {
-      Hit &h = m_hits[i];
-
-      int bin = getPhiPartition(h.phi());
-
-      if (bin != last_bin) 
-      {
-        m_phi_bin_infos[bin].first  = idx;
-        // PhiBinInfo.second set to 0 in Reset()
-      }
-      ++m_phi_bin_infos[bin].second;
-
-      last_bin = bin;
-      ++idx;
-    }
-  }
+  void SortByPhiBuildPhiBins();
 };
 
 //==============================================================================
@@ -144,7 +120,7 @@ public:
   void InsertHit(const Hit& hit)
   {
     int b1, b2;
-    int cnt = Config::getBothEtaBins(hit.eta(), b1, b2);
+    int cnt = getBothEtaBins(hit.eta(), b1, b2);
 
     if (b1 != -1) m_bunches_of_hits[b1].InsertHit(hit);
     if (b2 != -1) m_bunches_of_hits[b2].InsertHit(hit);
@@ -258,7 +234,7 @@ public:
   {
     // XXXX assuming vertex at origin.
     // XXXX the R condition is trying to get rid of bad seeds (as a quick hack)
-    int bin = Config::getEtaBin(track.momEta());
+    int bin = getEtaBin(track.momEta());
     float r = track.posR();
     if (bin != -1 && r > 11.9 && r < 12.1)
     {
@@ -347,9 +323,9 @@ public:
   {
     // XXXX assuming vertex at origin.
     // XXXX the R condition is trying to get rid of bad seeds (as a quick hack)
-    int bin = Config::getEtaBin(seed.momEta());
+    int bin = getEtaBin(seed.momEta());
     float r = seed.posR();
-    if (bin != -1 && r > 11.9 && r < 12.1)
+    if (bin != -1 && ( (Config::g_PropagateAtEnd == false && r > 11.9 && r < 12.1) || (Config::g_PropagateAtEnd == true && r > 15.9 && r < 16.1) ) )
       {
 	m_etabins_of_comb_candidates[bin].InsertSeed(seed);
       } 
@@ -362,8 +338,10 @@ public:
   {
     // XXXX assuming vertex at origin.
     // XXXX the R condition is trying to get rid of bad seeds (as a quick hack)
-    int bin = Config::getEtaBin(track.momEta());
+    int bin = getEtaBin(track.momEta());
     m_etabins_of_comb_candidates[bin].InsertTrack(track,seed_index);
   }
 
 };
+
+#endif

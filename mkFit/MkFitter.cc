@@ -1,7 +1,10 @@
 #include "MkFitter.h"
+#include "CandCloner.h"
 
 #include "PropagationMPlex.h"
 #include "KalmanUtilsMPlex.h"
+
+#include <sstream>
 
 void MkFitter::CheckAlignment()
 {
@@ -24,7 +27,9 @@ void MkFitter::PrintPt(int idx)
 
 //==============================================================================
 
-void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, int beg, int end)
+void MkFitter::InputTracksAndHits(std::vector<Track>&  tracks,
+                                  const Event& ev,
+                                  int beg, int end)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -46,10 +51,12 @@ void MkFitter::InputTracksAndHits(std::vector<Track>& tracks, int beg, int end)
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-      const Hit &hit = trk.hitsVector()[hi];
+      const auto hidx = trk.getHitIdx(hi);
+      const Hit &hit = ev.HitFromMCID(hidx);
 
-      msErr[hi].CopyIn(itrack, hit.error().Array());
-      msPar[hi].CopyIn(itrack, hit.parameters().Array());
+      msErr[hi].CopyIn(itrack, hit.errArray());
+      msPar[hi].CopyIn(itrack, hit.posArray());
+      HitsIdx[hi](itrack, 0, 0) = hidx.index_;
     }
   }
 }
@@ -72,19 +79,17 @@ void MkFitter::InputTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end
     Err[iC].CopyIn(itrack, trk.errors().Array());
     Par[iC].CopyIn(itrack, trk.parameters().Array());
 
-    Chg(itrack, 0, 0) = trk.charge();
+    Chg (itrack, 0, 0) = trk.charge();
     Chi2(itrack, 0, 0) = trk.chi2();
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-
-      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi);//dummy value for now
-
+      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi).index_;//dummy value for now
     }
   }
 }
 
-void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end)
+void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, std::vector<std::pair<int,int> >& idxs, int beg, int end, bool inputProp)
 {
   // Assign track parameters to initial state and copy hit values in.
 
@@ -99,28 +104,45 @@ void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks, st
 
     Label(itrack, 0, 0) = trk.label();
     SeedIdx(itrack, 0, 0) = idxs[i].first;
-
-    Err[iC].CopyIn(itrack, trk.errors().Array());
-    Par[iC].CopyIn(itrack, trk.parameters().Array());
+    CandIdx(itrack, 0, 0) = idxs[i].second;
+    
+    if (inputProp) 
+    {
+      Err[iP].CopyIn(itrack, trk.errors().Array());
+      Par[iP].CopyIn(itrack, trk.parameters().Array());
+    }
+    else
+    {
+      Err[iC].CopyIn(itrack, trk.errors().Array());
+      Par[iC].CopyIn(itrack, trk.parameters().Array());
+    }
 
     Chg(itrack, 0, 0) = trk.charge();
     Chi2(itrack, 0, 0) = trk.chi2();
 
     for (int hi = 0; hi < Nhits; ++hi)
     {
-
-      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi);//dummy value for now
-
+      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi).index_;//dummy value for now
     }
   }
 }
 
-int MkFitter::countInvalidHits(int itrack)
+int MkFitter::countValidHits(int itrack, int end_hit)
 {
   int result = 0;
-  for (int hi = 0; hi < Nhits; ++hi)
+  for (int hi = 0; hi < end_hit; ++hi)
     {
-      if (HitsIdx[hi](itrack, 0, 0)<0) result++;
+      if (HitsIdx[hi](itrack, 0, 0) >= 0) result++;
+    }
+  return result;
+}
+
+int MkFitter::countInvalidHits(int itrack, int end_hit)
+{
+  int result = 0;
+  for (int hi = 0; hi < end_hit; ++hi)
+    {
+      if (HitsIdx[hi](itrack, 0, 0) < 0) result++;
     }
   return result;
 }
@@ -159,8 +181,8 @@ void MkFitter::InputHitsOnly(std::vector<Hit>& hits, int beg, int end)
   {
     Hit &hit = hits[itrack];
 
-    msErr[Nhits].CopyIn(itrack, hit.error().Array());
-    msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+    msErr[Nhits].CopyIn(itrack, hit.errArray());
+    msPar[Nhits].CopyIn(itrack, hit.posArray());
   }
   Nhits++;
 }
@@ -204,7 +226,7 @@ void MkFitter::OutputTracks(std::vector<Track>& tracks, int beg, int end, int iC
   }
 }
 
-void MkFitter::OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, int end)
+void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end, bool outputProp)
 {
   // Copies last track parameters (updated) into Track objects and up to Nhits.
   // The tracks vector should be resized to allow direct copying.
@@ -212,8 +234,16 @@ void MkFitter::OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, in
   int itrack = 0;
   for (int i = beg; i < end; ++i, ++itrack)
   {
-    Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
-    Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    if (outputProp)
+    {
+      Err[iP].CopyOut(itrack, tracks[i].errors_nc().Array());
+      Par[iP].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    }
+    else 
+    { 
+      Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
+      Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
+    }
 
     tracks[i].setCharge(Chg(itrack, 0, 0));
     tracks[i].setChi2(Chi2(itrack, 0, 0));
@@ -224,50 +254,15 @@ void MkFitter::OutputFittedTracksAndHits(std::vector<Track>& tracks, int beg, in
     tracks[i].resetHits();
     for (int hi = 0; hi < Nhits; ++hi)
     {
-      Hit hit;
-
-      msErr[hi].CopyOut(itrack, hit.error_nc().Array());
-      msPar[hi].CopyOut(itrack, hit.parameters_nc().Array());
-
-      tracks[i].addHit(hit,0.);
-      tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);
+      tracks[i].addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);
     }
   }
 }
 
-
-void MkFitter::OutputFittedTracksAndHitIdx(std::vector<Track>& tracks, int beg, int end)
+void MkFitter::PropagateTracksToR(float R, const int N_proc)
 {
-  // Copies last track parameters (updated) into Track objects and up to Nhits.
-  // The tracks vector should be resized to allow direct copying.
-
-  int itrack = 0;
-  for (int i = beg; i < end; ++i, ++itrack)
-  {
-    Err[iC].CopyOut(itrack, tracks[i].errors_nc().Array());
-    Par[iC].CopyOut(itrack, tracks[i].parameters_nc().Array());
-
-    tracks[i].setCharge(Chg(itrack, 0, 0));
-    tracks[i].setChi2(Chi2(itrack, 0, 0));
-    tracks[i].setLabel(Label(itrack, 0, 0));
-
-    // XXXXX chi2 is not set (also not in SMatrix fit, it seems)
-
-    tracks[i].resetHits();
-    for (int hi = 0; hi < Nhits; ++hi)
-    {
-      tracks[i].addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);
-    }
-
-  }
-}
-
-void MkFitter::PropagateTracksToR(float R)
-{
-
     propagateHelixToRMPlex(Err[iC], Par[iC], Chg, R,
-                           Err[iP], Par[iP]);
-
+                           Err[iP], Par[iP], N_proc);
 }
 
 //fixme: do it properly with phi segmentation
@@ -299,8 +294,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
     //#pragma simd
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -344,8 +339,8 @@ void MkFitter::AddBestHit(std::vector<Hit>& lay_hits, int firstHit, int lastHit,
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
       HitsIdx[Nhits](itrack, 0, 0) = bestHit[itrack];//fixme should add the offset
     }
@@ -396,8 +391,8 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
     //fixme: please vectorize me...
     for (int i = beg; i < end; ++i, ++itrack)
     {
-      msErr_oneHit.CopyIn(itrack, hit.error().Array());
-      msPar_oneHit.CopyIn(itrack, hit.parameters().Array());
+      msErr_oneHit.CopyIn(itrack, hit.errArray());
+      msPar_oneHit.CopyIn(itrack, hit.posArray());
     }
 
     //now compute the chi2 of track state vs hit
@@ -454,13 +449,13 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
 	      newcand.setChi2(Chi2(itrack, 0, 0));
 	      for (int hi = 0; hi < Nhits; ++hi)
 		{
-		  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+		  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 		}
 #ifdef DEBUG
 	      std::cout << "output new hit with x=" << hit.position()[0] << std::endl;
 #endif
 
-	      newcand.addHitIdx(ih,chi2);
+	      newcand.addHit(HitID(Nhits,ih),chi2);
 	      //set the track state to the updated parameters
 	      Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
 	      Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
@@ -488,9 +483,9 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
       newcand.setChi2(Chi2(itrack, 0, 0));
       for (int hi = 0; hi < Nhits; ++hi)
 	{
-	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 	}
-      newcand.addHitIdx(-1,0.);
+      newcand.addHit(HitID(Nhits, HitID::MCLayerID),0.);
       //set the track state to the propagated parameters
       Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
       Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
@@ -574,7 +569,9 @@ void MkFitter::GetHitRange(std::vector<std::vector<BinInfo> >& segmentMapLay_, i
 // MT methods
 // ======================================================================================
 
-void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
+//#define DEBUG
+
+void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits, const int N_proc)
 {
   // must store hit vector into a data member so it can be used in hit selection.
   // or ... can have it passed into other functions.
@@ -585,7 +582,7 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
 
   // vecorized for
 #pragma simd
-  for (int itrack = 0; itrack < NN; ++itrack)
+  for (int itrack = 0; itrack < N_proc; ++itrack)
   {
     // Hmmh ... this should all be solved by partitioning ... let's try below ...
     //
@@ -619,52 +616,97 @@ void MkFitter::SelectHitRanges(BunchOfHits &bunch_of_hits)
     const float dphiPlus  = normalizedPhi(phi+nSigmaDphi);
 
 #ifdef DEBUG
-    std::cout << "dphi = " << dphi  << ", dphi2 = " << dphi2 << ", nSigmaDphi = " << nSigmaDphi << ", nSigma = " << Config::nSigma << std::endl;
-    std::cout << "phiMinus = " << dphiMinus << ", phiPlus = " << dphiPlus << std::endl;
+    std::ostringstream xout;
+    bool               xout_dump = false;
+    xout << "--------------------------------------------------------------------------------\n";
+    xout << "phi  = " << phi  << ", dphiMinus = " << dphiMinus << ", dphiPlus = " << dphiPlus << std::endl;
+    xout << "dphi = " << dphi  << ", dphi2 = " << dphi2 << ", nSigmaDphi = " << nSigmaDphi << ", nSigma = " << Config::nSigma << std::endl;
 #endif
 
     int   phiBinMinus = getPhiPartition(dphiMinus);
     int   phiBinPlus  = getPhiPartition(dphiPlus);
 
 #ifdef DEBUG
-    std::cout << "phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+    xout << "phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
 #endif
 
+    // XXXX are these checks really needed?
     phiBinMinus = std::max(0,phiBinMinus);
     phiBinMinus = std::min(Config::nPhiPart-1,phiBinMinus);
-    phiBinPlus = std::max(0,phiBinPlus);
-    phiBinPlus = std::min(Config::nPhiPart-1,phiBinPlus);
+    phiBinPlus  = std::max(0,phiBinPlus);
+    phiBinPlus  = std::min(Config::nPhiPart-1,phiBinPlus);
 
 
-    BinInfo binInfoMinus = bunch_of_hits.m_phi_bin_infos[int(phiBinMinus)];
-    BinInfo binInfoPlus  = bunch_of_hits.m_phi_bin_infos[int(phiBinPlus)];
+    PhiBinInfo_t binInfoMinus = bunch_of_hits.m_phi_bin_infos[phiBinMinus];
+    PhiBinInfo_t binInfoPlus  = bunch_of_hits.m_phi_bin_infos[phiBinPlus];
 
-    //fixme: temporary to avoid wrapping
-    if (binInfoMinus > binInfoPlus)
+    if (binInfoPlus.first + binInfoPlus.second - binInfoMinus.first > Config::g_MaxHitsConsidered)
     {
-      int phibin = getPhiPartition(phi);
-      phibin = std::max(0,phibin);
-      phibin = std::min(Config::nPhiPart-1,phibin);
-      binInfoMinus = bunch_of_hits.m_phi_bin_infos[phibin];
-      binInfoPlus  = bunch_of_hits.m_phi_bin_infos[phibin];
+      // XXXX
+      // Do something smart to reduce the range.
+      // I'd go for taking the exact phi bin and then walking left and right ...
+      // but this gives the wrap-around problem again.
     }
 
-    // fixme: if more than one eta bin we are looping over a huge range (need to make sure we are in the same eta bin)
-    // MT -- this is being fixed here. Plus improving other things ... and screwing up others :)
-
+    // XXXX
+    // Hmmh ... maybe the copying of extras should be done on demand.
+    // BunchOfHits could know how many extras it has already.
+    // Or Giuseppe is right ... and we should just update the index vector for SlurpIn
+    // instead of shifting of the base address as is done now. Sigh.
+    
+    // fixme: temporary to avoid wrapping
+    // This is now fixed with Config::g_MaxHitsConsidered extra hits copied to the end +
+    // changing XHitBegin/End to XHitPos/Size.
+    // Putting all of it into DEBUG
 #ifdef DEBUG
-    std::cout << "bin info begin=" << binInfoMinus.first << " end=" << binInfoPlus.first+binInfoPlus.second << std::endl;
+    if (binInfoMinus > binInfoPlus)
+    {
+      // xout_dump = true;
+      xout << "FIXER IN:  phiBinMinus = " << phiBinMinus << ", phiBinPlus = " << phiBinPlus << std::endl;
+      xout << "FIXER IN:  BIMinus.first = " << binInfoMinus.first << ", BIPlus.first = " << binInfoPlus.first << std::endl;
+      xout << "FIXER IN:  BIMinus.second = " << binInfoMinus.second << ", BIPlus.second = " << binInfoPlus.second << std::endl;
+
+      int phibin = getPhiPartition(phi);
+
+      xout << "FIXER   :  phibin = " << phibin << std::endl;
+
+      // XXXX are those two really needed?
+      phibin = std::max(0,phibin);
+      phibin = std::min(Config::nPhiPart-1,phibin);
+
+      xout << "FIXER   :  phibin = " << phibin << std::endl;
+    }
 #endif
 
-    XHitBegin.At(itrack, 0, 0) = binInfoMinus.first;
-    XHitEnd  .At(itrack, 0, 0) = binInfoPlus .first + binInfoPlus.second;
+    XHitPos .At(itrack, 0, 0) = binInfoMinus.first;
+    XHitSize.At(itrack, 0, 0) = binInfoPlus .first + binInfoPlus.second - binInfoMinus.first;
+    if (XHitSize.At(itrack, 0, 0) < 0)
+    {
+      // XXX It would be nice to have BunchOfHits.m_n_real_hits.
+      XHitSize.At(itrack, 0, 0) += bunch_of_hits.m_fill_index - Config::g_MaxHitsConsidered;
+    }
+
+    // XXXX Hack to limit N_hits to g_MaxHitsConsidered.
+    // Should at least take hits around central bin -- to be explored, esp. with jet presence.
+    // Strange ... this is worse than just taking first 25 hits !!!
+    // Comment out for now. Must talk to Giuseppe about this.
+    // if (XHitSize.At(itrack, 0, 0) > Config::g_MaxHitsConsidered)
+    // {
+    //   xout_dump = true;
+    //   XHitPos .At(itrack, 0, 0) += (XHitSize.At(itrack, 0, 0) - Config::g_MaxHitsConsidered) / 2;
+    //   XHitSize.At(itrack, 0, 0) = Config::g_MaxHitsConsidered;
+    // }
 
 #ifdef DEBUG
-    std::cout << "found range firstHit=" << XHitBegin.At(itrack, 0, 0) << " lastHit=" << XHitEnd  .At(itrack, 0, 0) << std::endl;
+    xout << "found range firstHit=" << XHitPos.At(itrack, 0, 0) << " size=" << XHitSize.At(itrack, 0, 0) << std::endl;
+    if (xout_dump)
+       std::cout << xout.str();
 #endif
 
   }
 }
+
+//#undef DEBUG
 
 
 //==============================================================================
@@ -684,8 +726,8 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -696,7 +738,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
   for (int it = 0; it < NN; ++it)
   {
-    int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
 #ifndef NO_PREFETCH
     _mm_prefetch(varr + off, _MM_HINT_T0);
@@ -706,16 +748,12 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     idx[it]      = off;
     idx_chew[it] = it*sizeof(Hit);
 
-    if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
-    {
-      maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
-    }
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
   //fixme this makes results dependent on vector unit size
-  if (maxSize > 25) maxSize = 25;
-
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
@@ -744,10 +782,10 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 #pragma simd
     for (int itrack = 0; itrack < NN; ++itrack)
     {
-      if ( XHitBegin.At(itrack, 0, 0) >= XHitEnd.At(itrack, 0, 0) ) continue;//is this going to break vectorization and also crash?
-      Hit &hit = bunch_of_hits.m_hits[std::min(XHitBegin.At(itrack, 0, 0) + hit_cnt, XHitEnd.At(itrack, 0, 0) - 1)];//redo the last hit in case of overflow
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+       Hit &hit = bunch_of_hits.m_hits[XHitBegin.At(itrack, 0, 0) +
+                                       std::min(hit_cnt, XHitSize.At(itrack, 0, 0) - 1)]; //redo the last hit in case of overflow
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
     }
     
 #else //NO_GATHER
@@ -807,7 +845,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
   //copy in MkFitter the hit with lowest chi2
   for (int itrack = 0; itrack < NN; ++itrack)
   {
-    _mm_prefetch((const char*) & bunch_of_hits.m_hits[XHitBegin.At(itrack, 0, 0) + bestHit[itrack]], _MM_HINT_T0);
+    _mm_prefetch((const char*) & bunch_of_hits.m_hits[XHitPos.At(itrack, 0, 0) + bestHit[itrack]], _MM_HINT_T0);
   }
     
 #pragma simd
@@ -816,7 +854,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
     //fixme decide what to do in case no hit found
     if (bestHit[itrack] >= 0)
     {
-      Hit   &hit  = bunch_of_hits.m_hits[ XHitBegin.At(itrack, 0, 0) + bestHit[itrack] ];
+      Hit   &hit  = bunch_of_hits.m_hits[ XHitPos.At(itrack, 0, 0) + bestHit[itrack] ];
       float &chi2 = minChi2[itrack];
 	  
 #ifdef DEBUG
@@ -825,10 +863,10 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
       std::cout << "copy in hit #" << bestHit[itrack] << " x=" << hit.position()[0] << " y=" << hit.position()[1] << std::endl;    
 #endif
 	  
-      msErr[Nhits].CopyIn(itrack, hit.error().Array());
-      msPar[Nhits].CopyIn(itrack, hit.parameters().Array());
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
       Chi2(itrack, 0, 0) += chi2;
-      HitsIdx[Nhits](itrack, 0, 0) = XHitBegin.At(itrack, 0, 0) + bestHit[itrack];
+      HitsIdx[Nhits](itrack, 0, 0) = XHitPos.At(itrack, 0, 0) + bestHit[itrack];
     }
     else
     {
@@ -863,8 +901,8 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
 
-  const int   off_error = (char*) bunch_of_hits.m_hits[0].error().Array()      - varr;
-  const int   off_param = (char*) bunch_of_hits.m_hits[0].parameters().Array() - varr;
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
 
   int idx[NN]      __attribute__((aligned(64)));
   int idx_chew[NN] __attribute__((aligned(64)));
@@ -875,7 +913,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
   // At the same time prefetch the first set of hits to L1 and the second one to L2.
   for (int it = 0; it < NN; ++it)
   {
-    int off = XHitBegin.At(it, 0, 0) * sizeof(Hit);
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
 
     _mm_prefetch(varr + off, _MM_HINT_T0);
     _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
@@ -883,14 +921,12 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
     idx[it]      = off;
     idx_chew[it] = it*sizeof(Hit);
 
-    if (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0) > maxSize)
-    {
-      maxSize = (XHitEnd.At(it, 0, 0) - XHitBegin.At(it, 0, 0));
-    }
+    // XXX There is an intrinsic for that, out of loop.
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
   }
 
   // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
-  if (maxSize > 25) maxSize = 25;
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
 
 #if defined(MIC_INTRINSICS)
   //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
@@ -990,9 +1026,9 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 	      newcand.setChi2(Chi2(itrack, 0, 0));
 	      for (int hi = 0; hi < Nhits; ++hi)
 		{
-		  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+		  newcand.addHit(HitID(hi,HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 		}
-	      newcand.addHitIdx(XHitBegin.At(itrack, 0, 0) + hit_cnt,chi2);
+	      newcand.addHit(HitID(Nhits, XHitPos.At(itrack, 0, 0) + hit_cnt),chi2);
 	      newcand.setLabel(Label(itrack, 0, 0));
 	      //set the track state to the updated parameters
 	      Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
@@ -1020,9 +1056,9 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
       newcand.setChi2(Chi2(itrack, 0, 0));
       for (int hi = 0; hi < Nhits; ++hi)
 	{
-	  newcand.addHitIdx(HitsIdx[hi](itrack, 0, 0),0.);//this should be ok since we already set the chi2 above
+	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 	}
-      newcand.addHitIdx(-1,0.);
+      newcand.addHit(HitID(Nhits,HitID::MCLayerID),0.);
       newcand.setLabel(Label(itrack, 0, 0));
       //set the track state to the propagated parameters
       Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
@@ -1030,4 +1066,322 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
       tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
     }
 
+}
+
+void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner,
+                                          const int offset, const int N_proc)
+{
+
+  //an array of vectors, i.e. we know the size of NN and for now we add all hits passing the chi2 cut
+  //std::vector<MkFitter::idxChi2Pair> hitsToAdd[NN];
+
+  const char *varr      = (char*) bunch_of_hits.m_hits;
+
+  const int   off_error = (char*) bunch_of_hits.m_hits[0].errArray() - varr;
+  const int   off_param = (char*) bunch_of_hits.m_hits[0].posArray() - varr;
+
+  int idx[NN]      __attribute__((aligned(64)));
+  // int idx_chew[NN] __attribute__((aligned(64)));
+
+  int maxSize = -1;
+
+  // Determine maximum number of hits for tracks in the collection.
+  // At the same time prefetch the first set of hits to L1 and the second one to L2.
+  for (int it = 0; it < N_proc; ++it)
+  {
+    int off = XHitPos.At(it, 0, 0) * sizeof(Hit);
+
+    _mm_prefetch(varr + off, _MM_HINT_T0);
+    _mm_prefetch(varr + sizeof(Hit) + off, _MM_HINT_T1);
+
+    idx[it]      = off;
+    // idx_chew[it] = it*sizeof(Hit);
+
+    // XXX There is an intrinsic for that, out of loop.
+    maxSize = std::max(maxSize, XHitSize.At(it, 0, 0));
+  }
+  // XXXX MT FIXME: Use the limit for:
+  // - SlurpIns, use masked gather for MIC_INTRINSICS
+  // - prefetching loops - DONE
+  // - computeChi2MPlex() -- really hard ... it calls Matriplex functions. This
+  //       should be fine. - DOES NOT NEED TO BE DONE
+  // - hit (valid or invalid) registration loops - DONE
+  // The following loop is not needed then. But I do need a mask for intrinsics slurpin.
+  for (int it = N_proc; it < NN; ++it)
+  {
+    idx[it]      = idx[0];
+    // idx_chew[it] = idx_chew[0];
+  }
+
+  // XXXX MT Uber hack to avoid tracks with like 300 hits to process.
+  // This will actually be applied in SelectHitRanges now ...
+  maxSize = std::min(maxSize, Config::g_MaxHitsConsidered);
+
+#if defined(MIC_INTRINSICS)
+  //__m512i vi = _mm512_setr_epi32(idx[ 0], idx[ 1], idx[ 2], idx[ 3], idx[ 4], idx[ 5], idx[ 6], idx[ 7],
+  //                               idx[ 8], idx[ 9], idx[10], idx[11], idx[12], idx[13], idx[14], idx[15]);
+  __m512i vi      = _mm512_load_epi32(idx);
+  // __m512i vi_chew = _mm512_load_epi32(idx_chew);
+#endif
+
+// Has basically no effect, it seems.
+//#pragma noprefetch
+  for (int hit_cnt = 0; hit_cnt < maxSize; ++hit_cnt, varr += sizeof(Hit))
+  {
+    //fixme what if size is zero???
+
+    //fixme avoid duplicates!
+
+    // Prefetch to L2 the hits we'll process after two loops iterations.
+    // Ideally this would be initiated before coming here, for whole bunch_of_hits.m_hits vector.
+    for (int itrack = 0; itrack < N_proc; ++itrack)
+    {
+      if (hit_cnt + 2 < XHitSize.At(itrack, 0, 0))
+        _mm_prefetch(varr + 2*sizeof(Hit) + idx[itrack], _MM_HINT_T1);
+    }
+
+#if defined(MIC_INTRINSICS)
+    msErr[Nhits].SlurpIn(varr + off_error, vi);
+    msPar[Nhits].SlurpIn(varr + off_param, vi);
+
+    //char arr_chew[NN*sizeof(Hit)] __attribute__((aligned(64)));
+
+    // This is a hack ... we know sizeof(Hit) = 64 = cache line = vector width.
+    // ChewIn runs about 2% slower than SlurpIn().
+    //msErr[Nhits].ChewIn(varr, off_error, idx, arr_chew, vi_chew);
+    //msPar[Nhits].ChewIn(varr, off_param, idx, arr_chew, vi_chew);
+
+    // This is a hack ... we know sizeof(Hit) = 64 = cache line = vector width.
+    // Contaginate + Plexify runs just about as fast as SlurpIn().
+    //msErr[Nhits].Contaginate(varr, idx, arr_chew);
+    //msErr[Nhits].Plexify(arr_chew + off_error, vi_chew);
+    //msPar[Nhits].Plexify(arr_chew + off_param, vi_chew);
+#else
+    msErr[Nhits].SlurpIn(varr + off_error, idx);
+    msPar[Nhits].SlurpIn(varr + off_param, idx);
+#endif
+
+    //now compute the chi2 of track state vs hit
+    MPlexQF outChi2;
+    computeChi2MPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], outChi2);
+
+    // Prefetch to L1 the hits we'll process in the next loop iteration.
+    for (int itrack = 0; itrack < N_proc; ++itrack)
+    {
+      if (hit_cnt + 1 < XHitSize.At(itrack, 0, 0))
+        _mm_prefetch(varr + sizeof(Hit) + idx[itrack], _MM_HINT_T0);
+    }
+
+#pragma simd
+    for (int itrack = 0; itrack < N_proc; ++itrack)
+      {
+	// make sure the hit was in the compatiblity window for the candidate
+	if (hit_cnt >= XHitSize.At(itrack, 0, 0)) continue;
+
+	float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
+#ifdef DEBUG
+	std::cout << "chi2=" << chi2 << " for trkIdx=" << itrack << std::endl;
+#endif
+	if (chi2 < Config::chi2Cut) 
+	  {
+	    IdxChi2List tmpList;
+	    tmpList.trkIdx = CandIdx(itrack, 0, 0);
+	    tmpList.hitIdx = XHitPos.At(itrack, 0, 0) + hit_cnt;
+	    tmpList.nhits  = countValidHits(itrack) + 1;
+	    tmpList.chi2   = Chi2(itrack, 0, 0) + chi2;
+            cloner.add_cand(SeedIdx(itrack, 0, 0) - offset, tmpList);
+	    // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+#ifdef DEBUG
+	    std::cout << "adding hit with hit_cnt=" << hit_cnt << " for trkIdx=" << tmpList.trkIdx << std::endl;
+#endif
+	  }
+      }
+    
+  }//end loop over hits
+
+  //now add invalid hit
+  //fixme: please vectorize me...
+  for (int itrack = 0; itrack < N_proc; ++itrack)
+    {
+#ifdef DEBUG
+      std::cout << "countInvalidHits(itrack)=" << countInvalidHits(itrack) << std::endl;
+#endif
+      if (countInvalidHits(itrack) > 0) continue;//check this is ok for vectorization //fixme not optimal
+      IdxChi2List tmpList;
+      tmpList.trkIdx = CandIdx(itrack, 0, 0);
+      tmpList.hitIdx = -1;
+      tmpList.nhits  = countValidHits(itrack);
+      tmpList.chi2   = Chi2(itrack, 0, 0);
+      cloner.add_cand(SeedIdx(itrack, 0, 0) - offset, tmpList);
+      // hitsToAdd[SeedIdx(itrack, 0, 0)-offset].push_back(tmpList);
+#ifdef DEBUG
+      std::cout << "adding invalid hit" << std::endl;
+#endif
+    }
+}
+
+
+
+void MkFitter::InputTracksAndHitIdx(std::vector<std::vector<Track> >& tracks,
+                                    std::vector<std::pair<int,MkFitter::IdxChi2List> >& idxs,
+                                    int beg, int end, bool inputProp)
+{
+  // Assign track parameters to initial state and copy hit values in.
+
+  // This might not be true for the last chunk!
+  // assert(end - beg == NN);
+
+  //fixme: why do we need both i and itrack in the loops below?
+
+  int itrack = 0;
+  for (int i = beg; i < end; ++i, ++itrack)
+  {
+
+    Track &trk = tracks[idxs[i].first][idxs[i].second.trkIdx];
+
+    Label(itrack, 0, 0) = trk.label();
+    SeedIdx(itrack, 0, 0) = idxs[i].first;
+    CandIdx(itrack, 0, 0) = idxs[i].second.trkIdx;
+
+    if (inputProp) 
+    {
+      Err[iP].CopyIn(itrack, trk.errors().Array());
+      Par[iP].CopyIn(itrack, trk.parameters().Array());
+    } 
+    else 
+    {      
+      Err[iC].CopyIn(itrack, trk.errors().Array());
+      Par[iC].CopyIn(itrack, trk.parameters().Array());
+    } 
+
+    Chg(itrack, 0, 0) = trk.charge();
+    Chi2(itrack, 0, 0) = trk.chi2();
+
+    for (int hi = 0; hi < Nhits; ++hi)
+    {
+      HitsIdx[hi](itrack, 0, 0) = trk.getHitIdx(hi).index_;//dummy value for now
+    }
+  }
+}
+
+void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
+                             std::vector<std::pair<int,IdxChi2List> >& idxs,
+                             std::vector<std::vector<Track> >& cands_for_next_lay,
+                             int offset, int beg, int end)
+{
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if (idxs[i].second.hitIdx < 0) continue;
+      Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
+    }
+  
+  updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
+  
+  itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      //create a new candidate and fill the cands_for_next_lay vector
+      Track newcand;
+      // Not needed after construction.
+      // newcand.resetHits(); //probably not needed
+      newcand.setCharge(Chg(itrack, 0, 0));
+      newcand.setChi2(idxs[i].second.chi2);
+      for (int hi = 0; hi < Nhits; ++hi)
+	{
+	  newcand.addHit(HitID(hi,HitsIdx[hi](itrack, 0, 0)), 0.);//this should be ok since we already set the chi2 above
+	}
+      newcand.addHit(HitID(Nhits, idxs[i].second.hitIdx), 0.);
+      newcand.setLabel(Label(itrack, 0, 0));
+      //set the track state to the updated parameters
+      if (idxs[i].second.hitIdx < 0) {
+	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
+      } else {
+	Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
+      }
+#ifdef DEBUG
+      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
+#endif
+
+      cands_for_next_lay[SeedIdx(itrack, 0, 0) - offset].push_back(newcand);
+    }
+}
+
+void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
+                             std::vector<std::pair<int,IdxChi2List> >& idxs,
+                             int beg, int end)
+{
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if (idxs[i].second.hitIdx < 0) continue;
+      Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
+      msErr[Nhits].CopyIn(itrack, hit.errArray());
+      msPar[Nhits].CopyIn(itrack, hit.posArray());
+    }
+  
+  updateParametersMPlex(Err[iP], Par[iP], msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
+
+  //now that we have moved propagation at the end of the sequence we lost the handle of 
+  //using the propagated parameters instead of the updated for the missing hit case. 
+  //so we need to replace by hand the updated with the propagated
+  //there may be a better way to restore this...
+  itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      if (idxs[i].second.hitIdx < 0) {
+	float tmp[21] = {0.};
+	Err[iP].CopyOut(itrack, tmp);
+	Err[iC].CopyIn(itrack, tmp);
+	Par[iP].CopyOut(itrack, tmp);
+	Par[iC].CopyIn(itrack, tmp);
+      }
+    }
+  
+}
+
+
+void MkFitter::CopyOutClone(std::vector<std::pair<int,IdxChi2List> >& idxs,
+			    std::vector<std::vector<Track> >& cands_for_next_lay,
+			    int offset, int beg, int end, bool outputProp)
+{
+  int itrack = 0;
+#pragma simd
+  for (int i = beg; i < end; ++i, ++itrack)
+    {
+      //create a new candidate and fill the cands_for_next_lay vector
+      Track newcand;
+      // Not needed after construction.
+      // newcand.resetHits(); //probably not needed
+      newcand.setCharge(Chg(itrack, 0, 0));
+      newcand.setChi2(idxs[i].second.chi2);
+      for (int hi = 0; hi < Nhits; ++hi)
+	{
+	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)), 0.);//this should be ok since we already set the chi2 above
+	}
+      newcand.addHit(HitID(Nhits,idxs[i].second.hitIdx), 0.);
+      newcand.setLabel(Label(itrack, 0, 0));
+
+      //set the track state to the updated parameters
+      if (outputProp) {
+	Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());
+      } else {
+	Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
+	Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
+      }
+#ifdef DEBUG
+      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
+#endif
+
+      cands_for_next_lay[SeedIdx(itrack, 0, 0) - offset].push_back(newcand);
+    }
 }

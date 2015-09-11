@@ -51,23 +51,29 @@ public:
   const Hit& HitFromMCID(uint32_t id) const
   {
     return HitFromID(HitIDFromMCID(id));
-  };
+  }
 
   const Hit& HitFromMCID(HitID id) const
   {
     return HitFromID(HitIDFromMCID(id));
-  };
+  }
 
   const MCHit& MCHitFromHitID(HitID id) const
   {
     assert(HitID::MCLayerID > id.layer_);
     return mcHits_[HitFromID(id).mcHitID()];
-  };
+  }
 
   const MCHit& MCHitFromHit(const Hit& hit) const
   {
     return mcHits_[hit.mcHitID()];
-  };
+  }
+
+  const MCHit& MCHitFromMCID(HitID id) const
+  {
+    assert(HitID::MCLayerID == id.layer_);
+    return mcHits_[id.index_];
+  }
 
   const Geometry& geom_;
   Validation& validation_;

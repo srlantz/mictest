@@ -32,10 +32,6 @@ void findCandidateHits(const Event& ev, unsigned int ilayer, const cand_t& track
 bool extendCandidate(const Event& ev, const HitID& hitid, const cand_t& track, const TrackState& outer_state,
                      cand_t& newtrack);
 
-inline float normalizedPhi(float phi) {
-  return std::fmod(phi, (float) M_PI);
-}
-
 #ifdef ETASEG
 inline float normalizedEta(float eta) {
   static float const ETA_DET = 2.0;

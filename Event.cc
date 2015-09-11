@@ -113,6 +113,7 @@ void Event::Simulate(unsigned int nTracks)
         hitids.push_back(hit.mcHitID());
       }
       simTracks_[itrack] = Track(q,pos,mom,covtrk,hitids,0.0);
+      simTracks_[itrack].setLabel(itrack);
     }
 #if defined(TBB)
   });

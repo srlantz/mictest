@@ -19,24 +19,9 @@
 #include <memory>
 
 //==============================================================================
-void initGeom(Geometry& geom)
-{
-  std::cout << "Constructing SimpleGeometry Cylinder geometry" << std::endl;
 
-  // NB: we currently assume that each node is a layer, and that layers
-  // are added starting from the center
-  // NB: z is just a dummy variable, VUSolid is actually infinite in size.  *** Therefore, set it to the eta of simulation ***
-  float eta = 2.0; // can tune this to whatever geometry required (one can make this layer dependent as well)
-  for (int l = 0; l < 10; l++) {
-    float r = (l+1)*4.;
-    VUSolid* utub = new VUSolid(r, r+.01);
-    float z = r / std::tan(2.0*std::atan(std::exp(-eta))); // calculate z extent based on eta, r
-    geom.AddLayer(utub, r, z);
-  }
-}
-
-
-void generateTracks(std::vector<Track>& simtracks, int Ntracks)
+/*
+void generateTracks(std::vector<Track>& simtracks, std::vector<HitVec>& simhits, int Ntracks)
 {
 
   Geometry geom;
@@ -66,13 +51,18 @@ void generateTracks(std::vector<Track>& simtracks, int Ntracks)
 
       setupTrackByToyMC(pos,mom,covtrk,hits,itrack,q,pt,geom,initialhits);
       // CHEP-2015 -- we are not passing initialhits here.
-      Track simtrk(q,pos,mom,covtrk,hits,0.);
-      simtracks[itrack] = simtrk;
+      SVector6 pars(pos[0],pos[1],pos[2],mom[0],mom[1],mom[2]);
+      TrackState tk_state(pars,covtrk,q);
+      Track sim_track;
+      sim_track.setState(tk_state);
+      simtracks[itrack] = sim_track;
       simtracks[itrack].setLabel(itrack);
+      simhits[itrack] = hits;
    }
 
    // printf("gen time = %f\n", dtime() - tstart);
 }
+*/
 
 void make_validation_tree(const char         *fname,
                           std::vector<Track> &simtracks,
@@ -95,9 +85,9 @@ void make_validation_tree(const char         *fname,
    const int NT = simtracks.size();
    for (int i = 0; i < NT; ++i)
    {
-      SVector6     &simp   = simtracks[i].parameters();
-      SVector6     &recp   = rectracks[i].parameters();
-      SMatrixSym66 &recerr = rectracks[i].errors();
+      const SVector6     &simp   = simtracks[i].parameters();
+      const SVector6     &recp   = rectracks[i].parameters();
+      const SMatrixSym66 &recerr = rectracks[i].errors();
 
       pt_mc  = sqrt(simp[3]*simp[3] + simp[4]*simp[4]);
       pt_fit = sqrt(recp[3]*recp[3] + recp[4]*recp[4]);
@@ -119,9 +109,11 @@ void make_validation_tree(const char         *fname,
 // runFittingTest
 //==============================================================================
 
-double runFittingTest(std::vector<Track>& simtracks, std::vector<Track>& rectracks)
+double runFittingTest(Event& ev, std::vector<Track>& rectracks)
 {
    // Standard fitting test using SMatrix
+
+  std::vector<Track>& simtracks = ev.simTracks_;
 
    //these matrices are dummy and can be optimized without multriplying by zero all the world...
    SMatrix36 projMatrix36;
@@ -145,7 +137,7 @@ double runFittingTest(std::vector<Track>& simtracks, std::vector<Track>& rectrac
       // std::cout << "init e: " << std::endl;
       // dumpMatrix(trk.errors());
 
-      const HitVec& hits = trk.hitsVector();
+      const auto& hitids = trk.hitIDs();
 
       // Make a copy since initState is used at the end to fill the tree.
       // Hmmh, not any more, it seems.
@@ -154,19 +146,20 @@ double runFittingTest(std::vector<Track>& simtracks, std::vector<Track>& rectrac
     
       bool dump = false;
     
-      for (auto hit=hits.begin();hit!=hits.end();++hit)
+      for (auto&& hitid : hitids)
       {
+         const auto& hit = ev.HitFromMCID(hitid);
          //for each hit, propagate to hit radius and update track state with hit measurement
-         TrackState propState = propagateHelixToR(updatedState, hit->r());
+         TrackState propState = propagateHelixToR(updatedState, hit.r());
 
-         MeasurementState measState = hit->measurementState();
+         MeasurementState measState = hit.measurementState();
          updatedState = updateParameters(propState, measState);
          //updateParameters66(propState, measState, updatedState);//updated state is now modified
       
          if (dump)
          {
             std::cout << std::endl;
-            std::cout << "processing hit #" << hit-hits.begin() << std::endl;
+            //std::cout << "processing hit #" << hit-hits.begin() << std::endl;
 
             std::cout << "propState.parameters (helix propagation)" << std::endl;
             std::cout << "x: " << propState.parameters[0] << " " << propState.parameters[1] << " " << propState.parameters[2] << std::endl;
@@ -189,7 +182,7 @@ double runFittingTest(std::vector<Track>& simtracks, std::vector<Track>& rectrac
             // dumpMatrix(propStateLine.errors);
             // TrackState propState = propStateLine;
 
-            std::cout << "measState.parameters" << std::endl;
+            std::cout << "measState.pos" << std::endl;
             std::cout << "x: " << measState.parameters[0] << " " << measState.parameters[1] << " " << measState.parameters[2] << std::endl;
             std::cout << "measState.errors" << std::endl;
             dumpMatrix(measState.errors);
@@ -222,8 +215,11 @@ double runFittingTest(std::vector<Track>& simtracks, std::vector<Track>& rectrac
 // runFittingTestPlex
 //==============================================================================
 
-double runFittingTestPlex(std::vector<Track>& simtracks, std::vector<Track>& rectracks)
+double runFittingTestPlex(Event& ev, std::vector<Track>& rectracks)
 {
+
+   std::vector<Track>& simtracks = ev.simTracks_;
+
    const int Nhits = MAX_HITS;
    // XXX What if there's a missing / double layer?
    // Eventually, should sort track vector by number of hits!
@@ -255,7 +251,7 @@ double runFittingTestPlex(std::vector<Track>& simtracks, std::vector<Track>& rec
 
       MkFitter *mkfp = mkfp_arr[omp_get_thread_num()];
 
-      mkfp->InputTracksAndHits(simtracks, itrack, end);
+      mkfp->InputTracksAndHits(simtracks, ev, itrack, end);
 
       mkfp->FitTracks();
 
