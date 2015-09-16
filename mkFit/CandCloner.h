@@ -99,13 +99,8 @@ public:
 
   void add_cand(int idx, const MkFitter::IdxChi2List& cand_info)
   {
-    static std::mutex glock;
-    std::lock_guard<std::mutex> locker(glock);
-
     m_hits_to_add[idx].push_back(cand_info);
-
     m_idx_max = std::max(m_idx_max, idx);
-    std::cout << "add_cand idx " << idx << " thread " << omp_get_thread_num() << std::endl;
   }
 
   void end_iteration()
