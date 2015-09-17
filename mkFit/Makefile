@@ -76,7 +76,7 @@ mkFit: ${AUTO_TGTS} ${ALLOBJS}
 	${CXX} ${CXXFLAGS} ${VEC_HOST} ${LDFLAGS} -o $@ ${ALLOBJS}
 
 ${MKFOBJS}: %.o: %.cc
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${VEC_HOST} -c -o $@ $<
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${VEC_HOST} -c -o $@ $< -MMD
 
 
 ### MIC build, icc only

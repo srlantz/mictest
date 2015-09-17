@@ -45,7 +45,7 @@ main: ${AUTO_TGTS} ${OBJS} ${LIBUSOLIDS}
 	${CXX} ${CXXFLAGS} ${VEC_HOST} -o $@ ${OBJS} ${LIBUSOLIDS} ${LDFLAGS}
 
 ${OBJS}: %.o: %.cc
-	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${VEC_HOST} -c -o $@ $<
+	${CXX} ${CPPFLAGS} ${CXXFLAGS} ${VEC_HOST} -c -o $@ $< -MMD
 
 ${LIBUSOLIDS} : USolids/CMakeLists.txt
 	-mkdir USolids-host
