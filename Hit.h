@@ -151,10 +151,20 @@ struct MeasurementState
 {
 public:
   MeasurementState() {}
+  MeasurementState(const SVector3& p, const SVector6& e)
+    : pos_(p), err_(e) {}
   MeasurementState(const SVector3& p, const SMatrixSym33& e)
-    : errors(e), parameters(p) {}
-  SMatrixSym33 errors;
-  SVector3 parameters;
+    : pos_(p) {
+      for (int i=0;i<6;++i) err_[i] = e.Array()[i];
+    }
+  const SVector3& parameters() const { return pos_; }
+  SMatrixSym33 errors() const { 
+    SMatrixSym33 result;
+    for (int i=0;i<6;++i) result.Array()[i]=err_[i];
+    return result; 
+  }
+  SVector3 pos_;
+  SVector6 err_;
 };
 
 class Hit
@@ -169,35 +179,35 @@ public:
 
   ~Hit(){}
 
-  const SVector3&     position()   const {return state_.parameters;}
-  const SVector3&     parameters() const {return state_.parameters;}
-  const SMatrixSym33& error()      const {return state_.errors;}
+  const SVector3&     position()   const {return state_.pos_;}
+  const SVector3&     parameters() const {return state_.pos_;}
+  const SMatrixSym33  error()      const {return state_.errors();}
 
-  const float* posArray() const {return state_.parameters.Array();}
-  const float* errArray() const {return state_.errors.Array();}
+  const float* posArray() const {return state_.pos_.Array();}
+  const float* errArray() const {return state_.err_.Array();}
 
   // Non-const versions needed for CopyOut of Matriplex.
-  SVector3&     parameters_nc() {return state_.parameters;}
-  SMatrixSym33& error_nc()      {return state_.errors;}
+  SVector3&     parameters_nc() {return state_.pos_;}
+  SVector6&     error_nc()      {return state_.err_;}
 
   float r() const {
-    return std::sqrt(state_.parameters.At(0)*state_.parameters.At(0) +
-                     state_.parameters.At(1)*state_.parameters.At(1));
+    return std::sqrt(state_.parameters().At(0)*state_.parameters().At(0) +
+                     state_.parameters().At(1)*state_.parameters().At(1));
   }
   float x() const {
-    return state_.parameters.At(0);
+    return state_.parameters().At(0);
   }
   float y() const {
-    return state_.parameters.At(1);
+    return state_.parameters().At(1);
   }
   float z() const {
-    return state_.parameters.At(2);
+    return state_.parameters().At(2);
   }
   float phi() const {
-    return getPhi(state_.parameters.At(0), state_.parameters.At(1));
+    return getPhi(state_.parameters().At(0), state_.parameters().At(1));
   }
   float eta() const {
-    return getEta(state_.parameters.At(0), state_.parameters.At(1), state_.parameters.At(2));
+    return getEta(state_.parameters().At(0), state_.parameters().At(1), state_.parameters().At(2));
   }
   int phiPart() const { return getPhiPartition(phi()); }
   int etaPart() const { return getEtaPartition(eta()); }
