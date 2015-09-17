@@ -82,7 +82,9 @@ public:
   void addHit(HitID hitID,float chi2) {hitIDs_.push_back(hitID);chi2_+=chi2;}
   void resetHits() { hitIDs_.clear(); }
   int  nHits()   const { return hitIDs_.size(); }
-  HitID getHitIdx(int hi) { return hitIDs_[hi]; }
+  HitID getHitIdx(int hi) {
+    if (hi < hitIDs_.size()) { return hitIDs_[hi]; } else { return HitID(HitID::InvHitID); }
+  }
   int nFoundHits() const { return hitIDs_.size(); } // fixme
   int nTotalHits() const { return hitIDs_.size(); } // fixme
 

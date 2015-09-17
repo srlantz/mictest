@@ -135,11 +135,12 @@ inline unsigned int binNumber(unsigned int etaPart, unsigned int phiPart)
 
 struct HitID {
   HitID() : layer_(0), index_(0) {}
-  static constexpr unsigned int MCLayerID = UINT32_MAX;
-  HitID(unsigned int layer, unsigned int index) : layer_(layer), index_(index) {}
-  HitID(unsigned int index) : layer_(MCLayerID), index_(index) {}
-  uint32_t layer_;
-  uint32_t index_;
+  static constexpr int MCLayerID = -1;
+  static constexpr int InvHitID = -1;
+  HitID(int layer, int index) : layer_(layer), index_(index) {}
+  HitID(int index) : layer_(MCLayerID), index_(index) {}
+  int layer_;
+  int index_;
 };
 
 inline bool operator==(const HitID& a, const HitID& b) {
@@ -159,7 +160,7 @@ public:
 class Hit
 {
 public:
-  Hit() : mcHitID_(HitID::MCLayerID) {}
+  Hit() : mcHitID_(HitID::InvHitID) {}
   Hit(const MeasurementState& state) : state_(state) {}
   Hit(const SVector3& position, const SMatrixSym33& error)
     : state_(position, error) {}
@@ -214,7 +215,7 @@ private:
 
 struct MCHit : public Hit
 {
-  MCHit() : hitID_(HitID::MCLayerID, HitID::MCLayerID) {}
+  MCHit() : hitID_(HitID::MCLayerID, HitID::InvHitID) {}
   MCHit(const Hit& hit, int track, int layer, int ithlayerhit)
     : Hit(hit), mcTrackID_(track), layer_(layer), ithLayerHit_(ithlayerhit)
       { setMCHitID(mcHitIDCounter_++); }
@@ -227,7 +228,7 @@ struct MCHit : public Hit
   int layer_;
   int ithLayerHit_;
   HitID hitID_;
-  static std::atomic<unsigned int> mcHitIDCounter_;
+  static std::atomic<int> mcHitIDCounter_;
 };
 
 typedef std::vector<Hit> HitVec;

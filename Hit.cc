@@ -1,3 +1,3 @@
 #include "Hit.h"
 
-std::atomic<unsigned int> MCHit::mcHitIDCounter_(0);
+std::atomic<int> MCHit::mcHitIDCounter_(0);

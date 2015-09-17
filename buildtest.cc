@@ -335,6 +335,6 @@ bool extendCandidate(const Event& ev, const HitID& hitid, const cand_t& track, c
   } else {
     return false; // FIXME
     //propState.valid = false;
-    //hit.hitid_.layer_ = HitID::MCLayerID; // missing hit marker
+    //hit.hitid_.layer_ = HitID::InvHitID; // missing hit marker
   }
 }

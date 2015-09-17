@@ -132,7 +132,7 @@ int MkFitter::countValidHits(int itrack, int end_hit)
   int result = 0;
   for (int hi = 0; hi < end_hit; ++hi)
     {
-      if (HitsIdx[hi](itrack, 0, 0) >= 0) result++;
+      if (HitsIdx[hi](itrack, 0, 0) != HitID::InvHitID) result++;
     }
   return result;
 }
@@ -142,7 +142,7 @@ int MkFitter::countInvalidHits(int itrack, int end_hit)
   int result = 0;
   for (int hi = 0; hi < end_hit; ++hi)
     {
-      if (HitsIdx[hi](itrack, 0, 0) < 0) result++;
+      if (HitsIdx[hi](itrack, 0, 0) == HitID::InvHitID) result++;
     }
   return result;
 }
@@ -485,7 +485,7 @@ void MkFitter::FindCandidates(std::vector<Hit>& lay_hits, int firstHit, int last
 	{
 	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 	}
-      newcand.addHit(HitID(Nhits, HitID::MCLayerID),0.);
+      newcand.addHit(HitID(Nhits, HitID::InvHitID),0.);
       //set the track state to the propagated parameters
       Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
       Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
@@ -1058,7 +1058,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 	{
 	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
 	}
-      newcand.addHit(HitID(Nhits,HitID::MCLayerID),0.);
+      newcand.addHit(HitID(Nhits,HitID::InvHitID),0.);
       newcand.setLabel(Label(itrack, 0, 0));
       //set the track state to the propagated parameters
       Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
