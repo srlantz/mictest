@@ -21,7 +21,7 @@ public:
 class Track
 {
 public:
-  Track() {}
+  Track() { hitIDs_.reserve(10); }
   Track(const TrackState& state, const HitIDVec& hitIDs, float chi2) : state_(state), hitIDs_(hitIDs), chi2_(chi2) {}
   Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitIDVec& hitIDs, float chi2) 
     : hitIDs_(hitIDs), chi2_(chi2) 
@@ -40,16 +40,9 @@ public:
     state_.valid = true;
   }
   Track(TrackState state, float chi2) :
-    state_(state), chi2_(chi2) {}
+    state_(state), chi2_(chi2) { hitIDs_.reserve(10); }
   Track(const TrackState& state, float chi2, int label, int nHits, const HitIDVec& hitIDs) :
-      state_(state),
-      chi2_(chi2),
-      label_(label)
-  {
-    for (auto&& h : hitIDs) {
-      addHit(h,0.);
-    }
-  }
+      state_(state), hitIDs_(hitIDs), chi2_(chi2), label_(label) {}
   
   ~Track(){}
 
