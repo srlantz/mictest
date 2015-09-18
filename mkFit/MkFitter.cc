@@ -896,7 +896,7 @@ void MkFitter::AddBestHit(BunchOfHits &bunch_of_hits)
 
 
 
-void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vector<Track> >& tmp_candidates, int offset)
+void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, CandVec& tmp_candidates, int offset)
 {
 
   const char *varr      = (char*) bunch_of_hits.m_hits;
@@ -1038,7 +1038,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
 	      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
 #endif
 	      
-	      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
+	      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].maybe_push(newcand);
 	    }
 	}
     }//end if (oneCandPassCut)
@@ -1063,7 +1063,7 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, std::vector<std::vecto
       //set the track state to the propagated parameters
       Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
       Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
-      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].push_back(newcand);
+      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].maybe_push(newcand);
     }
 
 }

@@ -4,6 +4,15 @@
 #include "Hit.h"
 #include "Matrix.h"
 #include <vector>
+#include <queue>
+
+namespace Config {
+  static constexpr const unsigned int nlayers_per_seed = 3;
+  static constexpr const unsigned int maxCand = 10;
+  static constexpr const float chi2Cut = 15.;
+  static constexpr const float nSigma = 3.;
+  static constexpr const float minDPhi = 0.;
+};
 
 typedef std::pair<unsigned int,unsigned int> SimTkIDInfo;
 
@@ -100,5 +109,38 @@ private:
   int label_ = -1;
 };
 
+inline bool operator<(const Track& cand1, const Track& cand2)
+{
+  if (cand1.nFoundHits()==cand2.nFoundHits()) return cand1.chi2()<cand2.chi2();
+  return cand1.nFoundHits()>cand2.nFoundHits();
+}
+
 typedef std::vector<Track> TrackVec;
+
+class TrackQueue : private std::priority_queue<Track> {
+public:
+  typedef std::priority_queue<Track> parent_type;
+  using parent_type::empty;
+  using parent_type::size;
+  using parent_type::top;
+  //using parent_type::push;
+  using parent_type::emplace;
+  using parent_type::pop;
+
+  void clear() { c.clear(); }
+  void swap(parent_type::container_type& x) { c.swap(x); }
+  void reserve(size_type n) { c.reserve(n); }
+  void maybe_push(const value_type& x) {
+    if (size() < c.capacity()) {
+      push(x);
+    } else {
+      if (x < top()) {
+        pop();
+        push(x);
+      }
+    }
+  }
+};
+
+typedef std::vector<TrackQueue> CandVec;
 #endif

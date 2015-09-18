@@ -1680,14 +1680,14 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 #ifdef TEST_CLONE_ENGINE
            cloner.begin_layer(&bunch_of_hits, ilay);
 #else
-	   std::vector<std::vector<Track> > tmp_candidates(th_n_seeds);
+	   CandVec tmp_candidates(th_n_seeds);
 	   for (int iseed=0;iseed<tmp_candidates.size();++iseed)
            {
              // XXXX MT: Tried adding 25 to reserve below as I was seeing some
              // time spent in push_back ... but it didn't really help.
              // We need to optimize this by throwing away and replacing the worst
              // candidate once a better one arrives. This will also avoid sorting.
-	     tmp_candidates[iseed].reserve(2*Config::maxCand);//factor 2 seems reasonable to start with
+	     tmp_candidates[iseed].reserve(Config::maxCand);
 	   }
 #endif	   
 	   //vectorized loop
@@ -1788,37 +1788,13 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 #ifdef DEBUG
 	       std::cout << "dump seed n " << is << " with input candidates=" << tmp_candidates[is].size() << std::endl;
 #endif
-	       if (tmp_candidates[is].size()>Config::maxCand)
-		 {
-#ifdef DEBUG
-		   std::cout << "erase extra candidates" 
-			     << " tmp_candidates[is].size()=" << tmp_candidates[is].size()
-			     << " Config::maxCand=" << Config::maxCand
-			     << std::endl;
-		   std::cout << "erase extra candidates" << std::endl;
-#endif	     
-                   auto sortbyindex = [&tmp_candidates, is](unsigned int in1, unsigned int in2)
-                     { return sortCandByHitsChi2(tmp_candidates[is][in1],tmp_candidates[is][in2]); };
-                   std::vector<unsigned int> ind(tmp_candidates[is].size());
-                   for (auto i = 0U; i < tmp_candidates[is].size(); ++i) { ind[i] = i; }
-                   std::partial_sort(ind.begin(), ind.begin()+(Config::maxCand-1),
-                                     ind.end(), sortbyindex);
-                   std::vector<Track> newtmp(Config::maxCand);
-                   for (auto i = 0U; i < Config::maxCand; ++i) {
-                     newtmp[i] = tmp_candidates[is][ind[i]];
-                   }
-		   tmp_candidates[is].swap(newtmp);
-		 }
-#ifdef DEBUG
-	       std::cout << "dump seed n " << is << " with output candidates=" << tmp_candidates[is].size() << std::endl;
-#endif
 	     } 
 	   //now swap with input candidates
 	   for (int is=0;is<tmp_candidates.size();++is)
 	     {
 	       if (tmp_candidates[is].size()>0)
 		 {
-		   etabin_of_comb_candidates.m_candidates[th_start_seed+is].swap(tmp_candidates[is]);
+		   tmp_candidates[is].swap(etabin_of_comb_candidates.m_candidates[th_start_seed+is]);
 		   tmp_candidates[is].clear();
 		 }
 	       else 
