@@ -16,25 +16,25 @@
 
 namespace
 {
-bool sortCandListByHitsChi2(MkFitter::IdxChi2List cand1,MkFitter::IdxChi2List cand2)
+bool sortCandListByHitsChi2(const MkFitter::IdxChi2List& cand1, const MkFitter::IdxChi2List& cand2)
 {
   if (cand1.nhits==cand2.nhits) return cand1.chi2<cand2.chi2;
   return cand1.nhits>cand2.nhits;
 }
 
-bool sortByHitsChi2(std::pair<Track, TrackState> cand1,std::pair<Track, TrackState> cand2)
+bool sortByHitsChi2(const std::pair<Track, TrackState>& cand1,const std::pair<Track, TrackState>& cand2)
 {
   if (cand1.first.nFoundHits()==cand2.first.nFoundHits()) return cand1.first.chi2()<cand2.first.chi2();
   return cand1.first.nFoundHits()>cand2.first.nFoundHits();
 }
 
-bool sortCandByHitsChi2(Track cand1,Track cand2)
+bool sortCandByHitsChi2(const Track& cand1, const Track& cand2)
 {
   if (cand1.nFoundHits()==cand2.nFoundHits()) return cand1.chi2()<cand2.chi2();
   return cand1.nFoundHits()>cand2.nFoundHits();
 }
 
-bool sortByPhi(Hit hit1,Hit hit2)
+bool sortByPhi(const Hit& hit1, const Hit& hit2)
 {
   return std::atan2(hit1.position()[1],hit1.position()[0])<std::atan2(hit2.position()[1],hit2.position()[0]);
 }
@@ -55,7 +55,7 @@ bool sortTracksByPhi(const Track& track1, const Track& track2){
 struct sortTracksByPhiStruct {
   std::vector<std::vector<Track> >* track_candidates;
   sortTracksByPhiStruct(std::vector<std::vector<Track> >* track_candidates_) { track_candidates=track_candidates_; }
-  bool operator() (std::pair<int,int> track1, std::pair<int,int> track2) {
+  bool operator() (const std::pair<int,int> track1, const std::pair<int,int> track2) {
     return (*track_candidates)[track1.first][track1.second].posPhi()<(*track_candidates)[track2.first][track2.second].posPhi();
   }
 };
@@ -1797,9 +1797,17 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 			     << std::endl;
 		   std::cout << "erase extra candidates" << std::endl;
 #endif	     
-       std::partial_sort(tmp_candidates[is].begin(), tmp_candidates[is].begin()+(Config::maxCand-1),
-                         tmp_candidates[is].end(), sortCandByHitsChi2);
-		   tmp_candidates[is].resize(Config::maxCand);
+                   auto sortbyindex = [&tmp_candidates, is](unsigned int in1, unsigned int in2)
+                     { return sortCandByHitsChi2(tmp_candidates[is][in1],tmp_candidates[is][in2]); };
+                   std::vector<unsigned int> ind(tmp_candidates[is].size());
+                   for (auto i = 0U; i < tmp_candidates[is].size(); ++i) { ind[i] = i; }
+                   std::partial_sort(ind.begin(), ind.begin()+(Config::maxCand-1),
+                                     ind.end(), sortbyindex);
+                   std::vector<Track> newtmp(Config::maxCand);
+                   for (auto i = 0U; i < Config::maxCand; ++i) {
+                     newtmp[i] = tmp_candidates[is][ind[i]];
+                   }
+		   tmp_candidates[is].swap(newtmp);
 		 }
 #ifdef DEBUG
 	       std::cout << "dump seed n " << is << " with output candidates=" << tmp_candidates[is].size() << std::endl;
