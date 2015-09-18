@@ -1797,8 +1797,9 @@ for (int btloopidx = 0; btloopidx < 10; ++btloopidx)
 			     << std::endl;
 		   std::cout << "erase extra candidates" << std::endl;
 #endif	     
-		   std::sort(tmp_candidates[is].begin(), tmp_candidates[is].end(), sortCandByHitsChi2);
-		   tmp_candidates[is].erase(tmp_candidates[is].begin()+Config::maxCand,tmp_candidates[is].end());
+       std::partial_sort(tmp_candidates[is].begin(), tmp_candidates[is].begin()+(Config::maxCand-1),
+                         tmp_candidates[is].end(), sortCandByHitsChi2);
+		   tmp_candidates[is].resize(Config::maxCand);
 		 }
 #ifdef DEBUG
 	       std::cout << "dump seed n " << is << " with output candidates=" << tmp_candidates[is].size() << std::endl;
