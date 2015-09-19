@@ -1010,35 +1010,33 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, CandVec& tmp_candidate
       //fixme: please vectorize me... (not sure it's possible in this case)
       for (int itrack = 0; itrack < NN; ++itrack)
 	{
-	  float chi2 = fabs(outChi2[itrack]);//fixme negative chi2 sometimes...
+	  float chi2 = std::abs(outChi2[itrack]);//fixme negative chi2 sometimes...
 #ifdef DEBUG
 	  std::cout << "chi2=" << chi2 << std::endl;      
 #endif
-	  if (chi2<Config::chi2Cut)
+          auto& tmpcand = tmp_candidates[SeedIdx(itrack, 0, 0)-offset];
+	  if (chi2<Config::chi2Cut && tmpcand.addp(chi2, Nhits+1))
 	    {
 #ifdef DEBUG
 	      std::cout << "chi2 cut passed, creating new candidate" << std::endl;
 #endif
 	      //create a new candidate and fill the reccands_tmp vector
-	      Track newcand;
-	      newcand.resetHits();//probably not needed
-	      newcand.setCharge(Chg(itrack, 0, 0));
-	      newcand.setChi2(Chi2(itrack, 0, 0));
+              Track& newcand = tmpcand.emplace_start();
 	      for (int hi = 0; hi < Nhits; ++hi)
 		{
-		  newcand.addHit(HitID(hi,HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
+		  newcand.addHit(HitID(hi,HitsIdx[hi](itrack, 0, 0)),0.);
 		}
+  	      newcand.setChi2(Chi2(itrack, 0, 0));
 	      newcand.addHit(HitID(Nhits, XHitPos.At(itrack, 0, 0) + hit_cnt),chi2);
 	      newcand.setLabel(Label(itrack, 0, 0));
+  	      newcand.setCharge(Chg(itrack, 0, 0));
 	      //set the track state to the updated parameters
 	      Err[iC].CopyOut(itrack, newcand.errors_nc().Array());
 	      Par[iC].CopyOut(itrack, newcand.parameters_nc().Array());
-	      
+              tmpcand.emplace_finish();
 #ifdef DEBUG
 	      std::cout << "updated track parameters x=" << newcand.parameters()[0] << " y=" << newcand.parameters()[1] << std::endl;
 #endif
-	      
-	      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].maybe_push(newcand);
 	    }
 	}
     }//end if (oneCandPassCut)
@@ -1050,22 +1048,24 @@ void MkFitter::FindCandidates(BunchOfHits &bunch_of_hits, CandVec& tmp_candidate
   for (int itrack = 0; itrack < NN;++itrack)
     {
       if (countInvalidHits(itrack)>0) continue;//check this is ok for vectorization //fixme not optimal
-      Track newcand;
-      newcand.resetHits();//probably not needed
-      newcand.setCharge(Chg(itrack, 0, 0));
-      newcand.setChi2(Chi2(itrack, 0, 0));
-      for (int hi = 0; hi < Nhits; ++hi)
-	{
-	  newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
-	}
-      newcand.addHit(HitID(Nhits,HitID::InvHitID),0.);
-      newcand.setLabel(Label(itrack, 0, 0));
-      //set the track state to the propagated parameters
-      Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
-      Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
-      tmp_candidates[SeedIdx(itrack, 0, 0)-offset].maybe_push(newcand);
+      float chi2 = Chi2(itrack, 0, 0);
+      auto& tmpcand = tmp_candidates[SeedIdx(itrack, 0, 0)-offset];
+      if (tmpcand.addp(chi2, Nhits)) {
+        Track& newcand = tmpcand.emplace_start();
+        newcand.setCharge(Chg(itrack, 0, 0));
+        newcand.setChi2(chi2);
+        for (int hi = 0; hi < Nhits; ++hi)
+          {
+            newcand.addHit(HitID(hi, HitsIdx[hi](itrack, 0, 0)),0.);//this should be ok since we already set the chi2 above
+          }
+        newcand.addHit(HitID(Nhits,HitID::InvHitID),0.);
+        newcand.setLabel(Label(itrack, 0, 0));
+        //set the track state to the propagated parameters
+        Err[iP].CopyOut(itrack, newcand.errors_nc().Array());
+        Par[iP].CopyOut(itrack, newcand.parameters_nc().Array());	      
+        tmpcand.emplace_finish();
+      }
     }
-
 }
 
 void MkFitter::FindCandidatesMinimizeCopy(BunchOfHits &bunch_of_hits, CandCloner& cloner,

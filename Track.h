@@ -30,7 +30,7 @@ public:
 class Track
 {
 public:
-  Track() { hitIDs_.reserve(10); }
+  Track(int reserve = 10) : chi2_(0.0) { hitIDs_.reserve(reserve); }
   Track(const TrackState& state, const HitIDVec& hitIDs, float chi2) : state_(state), hitIDs_(hitIDs), chi2_(chi2) {}
   Track(int charge, const SVector3& position, const SVector3& momentum, const SMatrixSym66& errors, const HitIDVec& hitIDs, float chi2) 
     : hitIDs_(hitIDs), chi2_(chi2) 
@@ -127,8 +127,14 @@ public:
   using parent_type::emplace;
   using parent_type::pop;
 
+  template <class... Args> reference emplace_start(Args&&... args)
+  {
+    if (size() == c.capacity()) pop();
+    c.emplace_back(std::forward<Args>(args)...); return c.back();
+  }
+  void emplace_finish() { std::push_heap(c.begin(), c.end(), comp); }
   void clear() { c.clear(); }
-  void swap(parent_type::container_type& x) { c.swap(x); }
+  void swap(container_type& x) { c.swap(x); }
   void reserve(size_type n) { c.reserve(n); }
   void maybe_push(const value_type& x) {
     if (size() < c.capacity()) {
@@ -139,6 +145,9 @@ public:
         push(x);
       }
     }
+  }
+  bool addp(float chi2, int nhits) {
+    return size() < c.capacity() || nhits > top().nFoundHits() || (nhits == top().nFoundHits() && chi2 < top().chi2());
   }
 };
 
