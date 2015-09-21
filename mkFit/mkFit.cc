@@ -3,6 +3,8 @@
 #include "fittestMPlex.h"
 #include "buildtestMPlex.h"
 
+#include "testPropagation.h"
+
 #include "MkFitter.h"
 
 #include "Timing.h"
@@ -109,9 +111,15 @@ void initGeom(Geometry& geom)
   // NB: z is just a dummy variable, VUSolid is actually infinite in size.  *** Therefore, set it to the eta of simulation ***
   float eta = 2.0; // can tune this to whatever geometry required (one can make this layer dependent as well)
 
-  //float rs[10] = {4,8,12,16,20,24,28,32,36,40};
-  float rs[10] = {4.42,7.31,10.17,25.65,33.81,41.89,49.67,60.95,69.11,78.19};
+  // float rs[10] = {4,8,12,16,20,24,28,32,36,40};
+  // float rs[10] = {4,11,18,25,32,37,44,51,58,65};
+  // float rs[10] = {4,14,24,34,44,54,64,74,84,94};
+  // float rs[10] = {4,19,34,49,64,79,94,109,124,139};
+  // float rs[10] = {4,7,10,26,34,42,50,60,70,80};
+  float rs[10] = {4.42,7.31,10.17,25.65,33.81,41.89,49.67,60.95,69.11,78.19}; // cms average radii
   // float rs[10] = {4.645119,7.056270,10.394469,23.825346,35.483938,40.386077,47.831438,58.456861,68.498828,79.933505};
+  // float rs[10] = {4.649200,7.090602,9.949886,23.721277,32.176070,43.572335,47.911020,58.495074,67.415390,70.232268};
+  // float rs[10] = {4.613008,7.071242,9.923145,26.926959,31.904536,43.218197,48.620887,59.528381,66.940796,79.979289};
 
   for (int l = 0; l < 10; l++) {
     float r = rs[l];
@@ -185,6 +193,8 @@ void test_standard()
       ev.Simulate(Ntracks);//fixme add g_gen.seed(742331); and #pragma omp parallel for num_threads(NUM_THREADS_SIM)
     }
 
+    // testPropagation(ev);return;
+    
     double tmp, tsm;
 
     smat_tracks.reserve(ev.simTracks_.size());

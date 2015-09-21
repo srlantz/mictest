@@ -37,8 +37,8 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
   for (unsigned int r=0; r<6; ++r) {
     for (unsigned int c=0; c<6; ++c) {
       if (r==c) {
-      if (r<3) covtrk(r,c)=pow(1.0*pos[r],2);//100% uncertainty on position
-      else covtrk(r,c)=pow(1.0*mom[r-3],2);  //100% uncertainty on momentum
+	if (r<3) covtrk(r,c)=pow(1.0*pos[r],2);//100% uncertainty on position
+	else covtrk(r,c)=pow(1.0*mom[r-3],2);  //100% uncertainty on momentum
       } else {
         covtrk(r,c)=0.;                   //no covariance
       }
@@ -302,7 +302,7 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
     hits.push_back(hit1);
     tmpState = propState;
 
-    dprint("initHitId: " << initHitXYZ.hitID() << " hit1Id: " << hit1.hitID() <<std::endl
+    dprint("initHitId: " //<< initHitXYZ.hitID() << " hit1Id: " << hit1.hitID() <<std::endl
                          << "ihit: " << ihit << " layer: " << simLayer << " counts: " << layer_counts[simLayer]);
 
     ++layer_counts[simLayer]; // count the number of times passed into layer
@@ -341,9 +341,10 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
   hits.reserve(nTotHit);
   initHits.reserve(nTotHit);
 
-  // std::ifstream infile("cmssw.onesimtrack.txt");
-  // std::ifstream infile("cmssw.simtracks.txt");
-  std::ifstream infile("cmssw.simtracks.widebs.txt");
+  // std::ifstream infile("cmssw.simtracks.SingleMu10GeV.10k.eta04z5.txt");
+  std::ifstream infile("cmssw.simtracks.SingleMu1GeV.1k.eta06z5.txt");
+  // std::ifstream infile("cmssw.simtracks.SingleMu1GeVNoMaterial.1k.eta06z5.txt");
+  // std::ifstream infile("cmssw.simtracks.SingleMu06GeV.1k.eta06z5.txt");
   std::string line;
   int countTracks = -1;
   unsigned int countHits   = 0;
@@ -360,6 +361,8 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
     if (type=="simTrack") {
       countTracks++;
       if (itrack!=countTracks) continue;
+      //std::cout << "countTracks=" << countTracks << std::endl;
+      //if (countTracks!=1) continue;
       gotTrack = true;
       float x,y,z,px,py,pz;
       int q;
@@ -396,7 +399,7 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
       UVector3 init_point(initX,initY,initZ);
       simLayer = geom.LayerIndex(init_point);
       simLayer = 1;//fixme
-      
+
       float hitZ    = hitposerrZ*g_gaus(g_gen)+initZ;
       float hitPhi  = ((hitposerrXY/initRad)*g_gaus(g_gen))+initPhi;
       float hitRad  = (hitposerrR)*g_gaus(g_gen)+initRad;
@@ -412,9 +415,9 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
       SMatrixSym33 covXYZ = ROOT::Math::SMatrixIdentity();
       covXYZ(0,0) = hitX*hitX*varR/hitRad2 + hitY*hitY*varPhi;
       covXYZ(1,1) = hitX*hitX*varPhi + hitY*hitY*varR/hitRad2;
-      covXYZ(2,2) = varZ;
       covXYZ(0,1) = hitX*hitY*(varR/hitRad2 - varPhi);
       covXYZ(1,0) = covXYZ(0,1);
+      covXYZ(2,2) = varZ;
     
       SVector3 initVecXYZ(initX,initY,initZ);
       int index = 10*itrack + countHits;

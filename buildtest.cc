@@ -48,7 +48,7 @@ void processCandidates(Event& ev, const Track& seed, candvec& candidates, unsign
 {
   auto& evt_track_candidates(ev.candidateTracks_);
 
-  dprint("processing seed # " << seed.SimTrackIDInfo().first << " par=" << seed.parameters() << " candidates=" << candidates.size());
+  dprint("processing seed # " << 0/*seed.SimTrackIDInfo().first*/ << " par=" << seed.parameters() << " candidates=" << candidates.size());
 
   candvec tmp_candidates;
   tmp_candidates.reserve(3*candidates.size()/2);
@@ -104,7 +104,7 @@ void buildTracksBySeeds(Event& ev)
     for (auto iseed = 0U; iseed != evt_seeds.size(); ++iseed) {
       const auto& seed(evt_seeds[iseed]);
 #endif
-      dprint("processing seed # " << seed.SimTrackIDInfo().first << " par=" << seed.parameters());
+      dprint("processing seed # " << 0/*seed.SimTrackIDInfo().first*/ << " par=" << seed.parameters());
       TrackState seed_state = seed.state();
       //seed_state.errors *= 0.01;//otherwise combinatorics explode!!!
       //should consider more than 1 candidate...
@@ -185,7 +185,7 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
   const auto& segmentMap(ev.segmentMap_);
   //  debug = true;
 
-  dprint("processing candidate with nHits=" << tkcand.nHits());
+  dprint("processing candidate with nHits=" << tkcand.nFoundHits());
 #ifdef LINEARINTERP
   TrackState propState = propagateHelixToR(updatedState,ev.geom_.Radius(ilayer));
 #else
@@ -318,9 +318,9 @@ void extendCandidate(const Event& ev, const cand_t& cand, candvec& tmp_candidate
 #ifdef LINEARINTERP
       const float ratio = (hitCand.r() - minR)/deltaR;
       propState.parameters = (1.0-ratio)*propStateMin.parameters + ratio*propStateMax.parameters;
-      dprint(std::endl << ratio << std::endl << propStateMin.parameters << std::endl << propState.parameters << std::endl
-                       << propStateMax.parameters << std::endl << propStateMax.parameters - propStateMin.parameters
-                       << std::endl << std::endl << hitMeas.parameters);
+      // dprint(std::endl << ratio << std::endl << propStateMin.parameters << std::endl << propState.parameters << std::endl
+      //                  << propStateMax.parameters << std::endl << propStateMax.parameters - propStateMin.parameters
+      //                  << std::endl << std::endl << hitMeas.parameters);
 #endif
       const float chi2 = computeChi2(propState,hitMeas);
     

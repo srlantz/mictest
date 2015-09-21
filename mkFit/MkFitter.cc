@@ -206,6 +206,9 @@ void MkFitter::FitTracks()
 // 	      << " has start pos=" << Par[iC].At(0, 0, 0) << " , " << Par[iC].At(0, 1, 0) << " , " << Par[iC].At(0, 2, 0) 
 // 	      << " mom=" << Par[iC].At(0, 3, 0) << " , " << Par[iC].At(0, 4, 0) << " , " << Par[iC].At(0, 5, 0) 
 // 	      << std::endl;
+//     std::cout << "err xx=" << Err[iC].At(0, 0, 0) << " yy=" << Err[iC].At(0, 1, 1) << " zz=" << Err[iC].At(0, 2, 2)
+// 	      << " pxpx=" << Err[iC].At(0, 3, 3) << " pypy=" << Err[iC].At(0, 4, 4) << " pzpz=" << Err[iC].At(0, 5, 5)
+// 	      << std::endl;
 // #endif
 
     propagateHelixToRMPlex(Err[iC], Par[iC], Chg, msPar[hi],
@@ -216,6 +219,9 @@ void MkFitter::FitTracks()
 // 	      << " has prop pos=" << Par[iP].At(0, 0, 0) << " , " << Par[iP].At(0, 1, 0) << " , " << Par[iP].At(0, 2, 0) 
 // 	      << " and hit pos=" << msPar[hi].At(0, 0, 0) << " , " << msPar[hi].At(0, 1, 0) << " , " << msPar[hi].At(0, 2, 0) 
 // 	      << std::endl;
+//     std::cout << "err xx=" << Err[iP].At(0, 0, 0) << " yy=" << Err[iP].At(0, 1, 1) << " zz=" << Err[iP].At(0, 2, 2)
+// 	      << " pxpx=" << Err[iP].At(0, 3, 3) << " pypy=" << Err[iP].At(0, 4, 4) << " pzpz=" << Err[iP].At(0, 5, 5)
+// 	      << std::endl;
 // #endif
 
     updateParametersMPlex(Err[iP], Par[iP], Chg, msErr[hi], msPar[hi],
@@ -224,6 +230,52 @@ void MkFitter::FitTracks()
 // #ifdef DEBUG
 //     std::cout << "track fit after hit #" << hi << " has pt=" << hipo(Par[iC].At(0, 3, 0),Par[iC].At(0, 4, 0)) << std::endl;
 // #endif
+
+  }
+
+  // XXXXX What's with chi2?
+}
+
+
+void MkFitter::TestPropagation()
+{
+  // Fitting loop.
+
+  for (int hi = 0; hi < Nhits; ++hi)
+  {
+    // Note, charge is not passed (line propagation).
+    // propagateLineToRMPlex(Err[iC], Par[iC], msErr[hi], msPar[hi],
+    //                       Err[iP], Par[iP]);
+
+#ifdef DEBUG
+    std::cout << "track fit before hit #" << hi 
+	      << " has start pos=" << Par[iC].At(0, 0, 0) << " , " << Par[iC].At(0, 1, 0) << " , " << Par[iC].At(0, 2, 0) 
+	      << " mom=" << Par[iC].At(0, 3, 0) << " , " << Par[iC].At(0, 4, 0) << " , " << Par[iC].At(0, 5, 0) 
+	      << std::endl;
+    std::cout << "err xx=" << Err[iC].At(0, 0, 0) << " yy=" << Err[iC].At(0, 1, 1) << " zz=" << Err[iC].At(0, 2, 2)
+	      << " pxpx=" << Err[iC].At(0, 3, 3) << " pypy=" << Err[iC].At(0, 4, 4) << " pzpz=" << Err[iC].At(0, 5, 5)
+	      << std::endl;
+#endif
+
+    propagateHelixToRMPlex(Err[iC], Par[iC], Chg, msPar[hi],
+                           Err[iP], Par[iP]);
+
+#ifdef DEBUG
+    std::cout << "track fit at hit #" << hi 
+	      << " has prop pos=" << Par[iP].At(0, 0, 0) << " , " << Par[iP].At(0, 1, 0) << " , " << Par[iP].At(0, 2, 0) 
+	      << " and hit pos=" << msPar[hi].At(0, 0, 0) << " , " << msPar[hi].At(0, 1, 0) << " , " << msPar[hi].At(0, 2, 0) 
+	      << std::endl;
+    std::cout << "err xx=" << Err[iP].At(0, 0, 0) << " yy=" << Err[iP].At(0, 1, 1) << " zz=" << Err[iP].At(0, 2, 2)
+	      << " pxpx=" << Err[iP].At(0, 3, 3) << " pypy=" << Err[iP].At(0, 4, 4) << " pzpz=" << Err[iP].At(0, 5, 5)
+	      << std::endl;
+#endif
+
+    Err[iC] = Err[iP];
+    Par[iC] = Par[iP];
+
+#ifdef DEBUG
+    std::cout << "track fit after hit #" << hi << " has pt=" << hipo(Par[iC].At(0, 3, 0),Par[iC].At(0, 4, 0)) << std::endl;
+#endif
 
   }
 
@@ -1348,8 +1400,14 @@ void MkFitter::UpdateWithHit(BunchOfHits &bunch_of_hits,
       Hit &hit = bunch_of_hits.m_hits[idxs[i].second.hitIdx];
       msErr[Nhits].CopyIn(itrack, hit.errArray());
       msPar[Nhits].CopyIn(itrack, hit.posArray());
+#ifdef DEBUG
+      std::cout << "updating with hit x=" << hit.x() << " y=" << hit.y() << " z=" << hit.z() << " r=" << hit.r()
+		<< std::endl;
+#endif
+
     }
-  
+
+
   updateParametersMPlex(Err[iP], Par[iP], Chg, msErr[Nhits], msPar[Nhits], Err[iC], Par[iC]);
 
   //now that we have moved propagation at the end of the sequence we lost the handle of 

@@ -2,7 +2,7 @@
 #define _event_
 
 #define TEST_CLONE_ENGINE
-//#define CLONE_ENGINE_SINGLE_THREAD
+#define CLONE_ENGINE_SINGLE_THREAD
 //#define BEST_OF_TEN
 
 #include "Track.h"
@@ -19,7 +19,7 @@ namespace Config {
   static constexpr const unsigned int nlayers_per_seed = 3;
   static constexpr const unsigned int maxCand = 10;
   static constexpr const float chi2Cut = 15.;
-  static constexpr const float nSigma = 3.;
+  static constexpr const float nSigma = 10.;//adjusted bacause hit search is not at proper radius... need a better way to deal with this
   static constexpr const float minDPhi = 0.;
 };
 

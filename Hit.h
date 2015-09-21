@@ -11,9 +11,9 @@ namespace Config
   static const float    PI = 3.14159265358979323846;
   static const float TwoPI = 6.28318530717958647692;
   
-  static constexpr const int   nPhiPart   = 1260; // 63;
+  static constexpr const int   nPhiPart   = 1260;
   static constexpr const float nPhiFactor = nPhiPart / TwoPI;
-  static constexpr const int   nEtaPart   = 11; // 10;
+  static constexpr const int   nEtaPart   = 1; // 11;
 
   static const int   nEtaBin   = 2*nEtaPart - 1;
   static const float fEtaDet   = 1;
@@ -25,6 +25,8 @@ namespace Config
   static const float fEtaFacB1 = nEtaPart / fEtaFull;
   static const float fEtaOffB2 = fEtaDet - fEtaFull / (2 * nEtaPart);
   static const float fEtaFacB2 = (nEtaPart - 1) / (fEtaFull - fEtaFull / nEtaPart);
+
+  static const unsigned int   Niter = 10;
 
   // This is for extra bins narrower ... thinking about this some more it
   // seems it would be even better to have two more exta bins, hanging off at

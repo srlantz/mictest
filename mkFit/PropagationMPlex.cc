@@ -120,7 +120,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
                                   MPlexLS &outErr,       MPlexLV& outPar)
 {
 #ifdef DEBUG
-   const bool dump = false;
+  const bool dump = false;
 #endif
 
    const idx_t N  = NN;
@@ -144,11 +144,11 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
 #ifdef DEBUG
       if (dump) std::cout << "attempt propagation from r=" << r0in << " to r=" << r << std::endl;
-      if (dump) std::cout << "x=" << xin << " y=" << yin << " px=" << pxin << " py=" << pyin << " pz=" << pzin << " q=" << inChg.ConstAt(n, 0, 0) << std::endl;
-      if ((r0in-r)>=0) {
-         if (dump) std::cout << "target radius same or smaller than starting point, returning input" << std::endl;
-         return;
-      }
+      if (dump) std::cout << "x=" << xin << " y=" << yin  << " z=" << inPar.ConstAt(n, 2, 0) << " px=" << pxin << " py=" << pyin << " pz=" << pzin << " q=" << inChg.ConstAt(n, 0, 0) << std::endl;
+      // if ((r0in-r)>=0) {
+      //    if (dump) std::cout << "target radius same or smaller than starting point, returning input" << std::endl;
+      //    return;
+      // }
 #endif
 
       float pt2    = pxin*pxin+pyin*pyin;
@@ -167,8 +167,8 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       //variables to be updated at each iterations
       //derivatives initialized to value for first iteration, i.e. distance = r-r0in
       float totalDistance = 0;
-      float dTDdx = r0in>0. ? -xin/r0in : 0.;
-      float dTDdy = r0in>0. ? -yin/r0in : 0.;
+      float dTDdx = (r0in>0. && fabs(r-r0in)>0.00000001) ? -xin/r0in : 0.;
+      float dTDdy = (r0in>0. && fabs(r-r0in)>0.00000001) ? -yin/r0in : 0.;
       float dTDdpx = 0.;
       float dTDdpy = 0.;
       //temporaries used within the loop (declare here to reduce memory operations)
@@ -187,8 +187,9 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       // float dxdvar = 0.;
       // float dydvar = 0.;
       //5 iterations is a good starting point
-      const unsigned int Niter = 5;
-      for (unsigned int i=0;i<Niter;++i)
+      //const unsigned int Niter = 10;
+      // const unsigned int Niter = 5+std::round(r-r0)/2;
+      for (unsigned int i=0;i<Config::Niter;++i)
       {
 #ifdef DEBUG
          if (dump) std::cout << "propagation iteration #" << i << std::endl;
@@ -202,12 +203,12 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
 #ifdef DEBUG
          if (dump) std::cout << "r0=" << r0 << " pt=" << pt << std::endl;
-         if (dump) {
-            if (r==r0) {
-               std::cout << "distance = 0 at iteration=" << i << std::endl;
-               break;
-            }
-         }
+         // if (dump) {
+         //    if (r==r0) {
+         //       std::cout << "distance = 0 at iteration=" << i << std::endl;
+         //       break;
+         //    }
+         // }
 #endif
 
          //distance=r-r0;//remove temporary
@@ -220,9 +221,9 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
          if (dump) std::cout << "angPath=" << angPath << std::endl;
 #endif
 
-         // cosAP=cos(angPath);
-         // sinAP=sin(angPath);
-         sincos4(angPath, sinAP, cosAP);
+         cosAP=cos(angPath);
+         sinAP=sin(angPath);
+         // sincos4(angPath, sinAP, cosAP);
 
          //helix propagation formulas
          //http://www.phys.ufl.edu/~avery/fitting/fitting4.pdf
@@ -233,7 +234,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
          outPar.At(n, 4, 0) = py*cosAP+px*sinAP;
          //outPar.At(n, 5, 0) = pz; //take this out as it is redundant
 
-         if (i+1 != Niter && r0 > 0)
+         if (i+1 != Config::Niter && r0 > 0 && fabs(angPath)>0.000000001)
          {
             //update derivatives on total distance for next step, where totalDistance+=r-r0
             //now r0 depends on px and py
@@ -266,11 +267,19 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
             //dydpy = k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy);
             //dTDdpy -= r0*(x*dxdpy + y*(k*dydpy);
             dTDdpy -= r0*(x*(k*(px*cosAP*dAPdpy - 1. + cosAP - py*sinAP*dAPdpy)) + y*(k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy)));
+
          }
 
 #ifdef DEBUG
-         if (dump) std::cout << outPar.At(n, 0, 0) << " " << outPar.At(n, 1, 0) << " " << outPar.At(n, 2, 0) << std::endl;
-         if (dump) std::cout << outPar.At(n, 3, 0) << " " << outPar.At(n, 4, 0) << " " << outPar.At(n, 5, 0) << std::endl;
+	 if (dump) std::cout << "iteration end, dump parameters" << std::endl;
+         if (dump) std::cout << "pos = " << outPar.At(n, 0, 0) << " " << outPar.At(n, 1, 0) << " " << outPar.At(n, 2, 0) << std::endl;
+         if (dump) std::cout << "mom = " << outPar.At(n, 3, 0) << " " << outPar.At(n, 4, 0) << " " << outPar.At(n, 5, 0) << std::endl;
+	 if (dump) std::cout << "r=" << sqrt( outPar.At(n, 0, 0)*outPar.At(n, 0, 0) + outPar.At(n, 1, 0)*outPar.At(n, 1, 0) ) << " pT=" << sqrt( outPar.At(n, 3, 0)*outPar.At(n, 3, 0) + outPar.At(n, 4, 0)*outPar.At(n, 4, 0) ) << std::endl;
+	 if (dump) std::cout << "dAPdx=" << dAPdx << " dAPdy=" << dAPdy
+			     << " dAPdpx=" << dAPdpx << " dAPdpy=" << dAPdpy
+			     << " dTDdx=" << dTDdx << " dTDdy=" << dTDdy
+			     << " dTDdpx=" << dTDdpx << " dTDdpy=" << dTDdpy
+			     << std::endl;
 #endif
       }
 
@@ -306,6 +315,21 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
 
       // Not everything is set! GenMul patterns are used to set 0 and 1 elements.
+#ifdef DEBUG
+   if (dump) {
+     std::cout 
+       << " dTDdx=" << dTDdx
+       << " dTDdy=" << dTDdy
+       << " dTPdx=" << dTPdx
+       << " dTPdy=" << dTPdy
+       << " dTPdpx=" << dTPdpx
+       << " dTPdpy=" << dTPdpy
+       << " sinTP=" << sinTP
+       << " cosTP=" << cosTP
+       << " TD=" << TD
+       << std::endl;
+   }
+#endif
 
       errorProp(n,0,0) = 1 + k*dTPdx*(pxin*sinTP + pyin*cosTP);	//dxdx;
       errorProp(n,0,1) = k*dTPdy*(pxin*sinTP + pyin*cosTP);	//dxdy;
@@ -329,6 +353,24 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       errorProp(n,4,3) = +sinTP - dTPdpx*(pyin*sinTP - pxin*cosTP);//dpydpx;
       errorProp(n,4,4) = +cosTP - dTPdpy*(pyin*sinTP - pxin*cosTP);//dpydpy;
    }
+
+#ifdef DEBUG
+   if (dump) {
+     for (int kk = 0; kk < N; ++kk)
+     {
+       printf("outErr before prop %d\n", kk);
+       for (int i = 0; i < 6; ++i) { for (int j = 0; j < 6; ++j)
+           printf("%8f ", outErr.At(kk,i,j)); printf("\n");
+       } printf("\n");
+
+       printf("errorProp %d\n", kk);
+       for (int i = 0; i < 6; ++i) { for (int j = 0; j < 6; ++j)
+           printf("%8f ", errorProp.At(kk,i,j)); printf("\n");
+       } printf("\n");
+
+     }
+   }
+#endif
 
    // Matriplex version of:
    // result.errors = ROOT::Math::Similarity(errorProp, outErr);
@@ -355,6 +397,66 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
    }
 #endif
 
+   //we deal with material only once (fixme)
+   // outErr.AddNoiseIntoUpperLeft3x3(0.1); // e.g. ? 0.0008
+
+  //add multiple scattering uncertainty and energy loss
+#pragma simd
+   for (int n = 0; n < N; ++n)
+   {
+      const float& x = outPar.ConstAt(n,0,0);
+      const float& y = outPar.ConstAt(n,0,1);
+      const float& px = outPar.ConstAt(n,0,3);
+      const float& py = outPar.ConstAt(n,0,4);
+      const float& pz = outPar.ConstAt(n,0,5);
+      float r = sqrt(x*x+y*y);
+      float pt = px*px + py*py;
+      float p2 = pt + pz*pz;
+      pt =sqrt(pt);
+      float p = sqrt(p2);
+      constexpr float mpi = 0.140; // m=140 MeV, pion
+      constexpr float mpi2 = 0.140*0.140; // m=140 MeV, pion
+      float beta2 = p2/(p2+mpi2);
+      float beta = sqrt(beta2);
+      //radiation lenght, corrected for the crossing angle (cos alpha from dot product of radius vector and momentum)
+      float invCos = (p*r)/fabs(x*px+y*py);
+      float radL = 0.02 * invCos; //fixme works only for barrel geom, and using average radL for now... (to be taken from hit)
+      // multiple scattering
+      // in a reference frame defined by the orthogonal unit vectors: u=(px/p,py/p,pz/p) v=(-py/pt,px/pt,0) s=(-pzpx/pt/p,-pzpy/pt/p,pt/p)
+      // we consider two planar angles theta1 and theta2 in the uv and us planes respectively
+      // note theta1 and theta2 are different angles but with the same rms value thetaMSC
+      // first order approximation: sin_thetaMSC ~ thetaMSC
+      // px' = px - (py*p*theta1 + pz*px*theta2)/pt; 
+      // py' = py + (px*p*theta1 - pz*py*theta2)/pt;
+      // pz' = pz + pt*theta2;
+      // this actually changes |p| so that p'^2 = p^2(1+2thetaMSC^2) so we should renormalize everything but we neglect this effect here (we are just inflating uncertainties a bit)
+      float thetaMSC = 0.0136*sqrt(radL)*(1.+0.038*log(radL))/(beta*p);// eq 32.15
+      float thetaMSC2 = thetaMSC*thetaMSC;
+      float thetaMSC2overPt2 = thetaMSC2/(pt*pt);
+      outErr.At(n, 3, 3) += (py*py*p*p + pz*pz*px*px)*thetaMSC2overPt2;
+      outErr.At(n, 4, 4) += (px*px*p*p + pz*pz*py*py)*thetaMSC2overPt2;
+      outErr.At(n, 5, 5) += pt*pt*thetaMSC2;
+      outErr.At(n, 3, 4) += px*py*(p*p + pz*pz)*thetaMSC2overPt2;
+      outErr.At(n, 3, 5) += -pz*px*thetaMSC2;
+      outErr.At(n, 4, 5) += -pz*py*thetaMSC2;
+      // std::cout << "beta=" << beta << " p=" << p << std::endl;
+      std::cout << "multiple scattering thetaMSC=" << thetaMSC << " thetaMSC2=" << thetaMSC2 << " radL=" << radL << " cxx=" << (py*py*p*p + pz*pz*px*px)*thetaMSC2overPt2 << " cyy=" << (px*px*p*p + pz*pz*py*py)*thetaMSC2overPt2 << " czz=" << pt*pt*thetaMSC2 << std::endl;
+      // energy loss
+      float gamma = 1./sqrt(1 - beta2);
+      float gamma2 = gamma*gamma;
+      constexpr float me = 0.0005; // m=0.5 MeV, electron
+      float wmax = 2*me*beta2*gamma2 / ( 1 + 2*gamma*me/mpi + me*me/(mpi*mpi) );
+      constexpr float I = 16.0e-9 * 10.75;
+      float deltahalf = log(28.816e-9 * sqrt(2.33*0.498)/I) + log(beta*gamma) - 0.5;
+      float dEdx = 0.06e-3 * invCos * (0.5*log(2*me*beta2*gamma2*wmax/(I*I)) - beta2 - deltahalf) / beta2 ;
+      // std::cout << "dEdx=" << dEdx << " delta=" << deltahalf << std::endl;
+      float dP = dEdx/beta;
+      outPar.At(n, 0, 3) -= dP*px/p;
+      outPar.At(n, 0, 4) -= dP*py/p;
+      outPar.At(n, 0, 5) -= dP*pz/p;
+      //we do nothing on the uncertainty for now
+    }
+
    /*
      if (fabs(sqrt(outPar[0]*outPar[0]+outPar[1]*outPar[1])-r)>0.0001) {
      std::cout << "DID NOT GET TO R, dR=" << fabs(sqrt(outPar[0]*outPar[0]+outPar[1]*outPar[1])-r)
@@ -366,11 +468,11 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
 void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
                             const MPlexQI& inChg,  const float    r,
-                                  MPlexLS& outErr,       MPlexLV& outPar,
+			    MPlexLS& outErr,       MPlexLV& outPar,
                             const int      N_proc)
 {
 #ifdef DEBUG
-   const bool dump = false;
+  const bool dump = false;
 #endif
 
    outErr = inErr;
@@ -438,8 +540,9 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       // float dxdvar = 0.;
       // float dydvar = 0.;
       //5 iterations is a good starting point
-      const unsigned int Niter = 5;
-      for (unsigned int i=0;i<Niter;++i)
+      //const unsigned int Niter = 10;
+      // const unsigned int Niter = 5+std::round(r-r0)/2;
+      for (unsigned int i=0;i<Config::Niter;++i)
       {
 #ifdef DEBUG
          if (dump) std::cout << "propagation iteration #" << i << std::endl;
@@ -471,9 +574,9 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
          if (dump) std::cout << "angPath=" << angPath << std::endl;
 #endif
 
-         // cosAP=cos(angPath);
-         // sinAP=sin(angPath);
-         sincos4(angPath, sinAP, cosAP);
+         cosAP=cos(angPath);
+         sinAP=sin(angPath);
+         // sincos4(angPath, sinAP, cosAP);
 
          //helix propagation formulas
          //http://www.phys.ufl.edu/~avery/fitting/fitting4.pdf
@@ -484,7 +587,7 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
          outPar.At(n, 4, 0) = py*cosAP+px*sinAP;
          //outPar.At(n, 5, 0) = pz; //take this out as it is redundant
 
-         if (i+1 != Niter && r0 > 0)
+         if (i+1 != Config::Niter && r0 > 0)
          {
             //update derivatives on total distance for next step, where totalDistance+=r-r0
             //now r0 depends on px and py

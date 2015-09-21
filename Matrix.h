@@ -115,7 +115,7 @@ inline void sincos4(float x, float& sin, float& cos)
   #endif
 
   #ifndef NUM_THREADS_SIM
-  #define NUM_THREADS_SIM 60
+  #define NUM_THREADS_SIM 1
   #endif
 
   #ifndef THREAD_BINDING

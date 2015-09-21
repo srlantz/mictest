@@ -199,16 +199,46 @@ void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MP
 
   MPlexLS propErr;
   MPlexLV propPar;
-  // do a line propagation step to correct for residual distance from the hit radius
-  // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
-  // do a full propagation step to correct for residual distance from the hit radius - need the charge for this
-  propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
-  // propErr = psErr;
-  // propPar = psPar;
-  propErr.AddNoiseIntoUpperLeft3x3(0.); // e.g. ? 0.0008
+  if ( fabs( (psPar.ConstAt(0,0,0)*psPar.ConstAt(0,0,0) + psPar.ConstAt(0,1,0)*psPar.ConstAt(0,1,0)) - (msPar.ConstAt(0,0,0)*msPar.ConstAt(0,0,0) + msPar.ConstAt(0,1,0)*msPar.ConstAt(0,1,0)) )>0.00001 ) {//fixme find a clean way to do this
+    // do a line propagation step to correct for residual distance from the hit radius
+    // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
+    // do a full propagation step to correct for residual distance from the hit radius - need the charge for this
+    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
+    
+#ifdef DEBUG
+  if (dump) {
+    std::cout << "parameters after second propagation step x= " << propPar.ConstAt(0,0,0)
+	      << " y=" << propPar.ConstAt(0,1,0)
+	      << " z=" << propPar.ConstAt(0,2,0)
+	      << " px=" << propPar.ConstAt(0,3,0)
+	      << " py=" << propPar.ConstAt(0,4,0)
+	      << " pz=" << propPar.ConstAt(0,5,0)
+	      << " r=" << sqrt( propPar.ConstAt(0,0,0)*propPar.ConstAt(0,0,0) + propPar.ConstAt(0,1,0)*propPar.ConstAt(0,1,0))
+	      << " pT=" << sqrt( propPar.ConstAt(0,3,0)*propPar.ConstAt(0,3,0) + propPar.ConstAt(0,4,0)*propPar.ConstAt(0,4,0))
+	      << std::endl;    
+    std::cout << "errors after second propagation step xx= " << propErr.ConstAt(0,0,0)
+	      << " yy=" << propErr.ConstAt(0,1,1)
+	      << " zz=" << propErr.ConstAt(0,2,2)
+	      << " pxpx=" << propErr.ConstAt(0,3,3)
+	      << " pypy=" << propErr.ConstAt(0,4,4)
+	      << " pzpz=" << propErr.ConstAt(0,5,5)
+	      << std::endl;
+  }
+#endif    
+  } else {
+#ifdef DEBUG
+  if (dump) std::cout << "no second propagation step" << std::endl;    
+#endif
+    propErr = psErr;
+    propPar = psPar;
+  }
 
 #ifdef DEBUG
   if (dump) {
+    std::cout << "hit errors xx= " << msErr.ConstAt(0,0,0)
+	      << " yy=" << msErr.ConstAt(0,1,1)
+	      << " zz=" << msErr.ConstAt(0,2,2)
+	      << std::endl;
     MPlexHV measPar = msPar;
     printf("measPar:\n");
     for (int i = 0; i < 3; ++i) { 
@@ -238,6 +268,14 @@ void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MP
 
 #ifdef DEBUG
   if (dump) {
+    std::cout << "res errors xx= " << resErr.ConstAt(0,0,0)
+	      << " yy=" << resErr.ConstAt(0,1,1)
+	      << " zz=" << resErr.ConstAt(0,2,2)
+	      << std::endl;
+    std::cout << "delta2 xx= " << pow(propPar.ConstAt(0,0,0)-msPar.ConstAt(0,0,0),2)
+	      << " yy=" << pow(propPar.ConstAt(0,1,0)-msPar.ConstAt(0,1,0),2)
+	      << " zz=" << pow(propPar.ConstAt(0,2,0)-msPar.ConstAt(0,2,0),2)
+	      << std::endl;
     printf("resErr:\n");
     for (int i = 0; i < 3; ++i) { for (int j = 0; j < 3; ++j)
         printf("%8f ", resErr.At(0,i,j)); printf("\n");
@@ -326,13 +364,15 @@ void computeChi2MPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MPlexQI
 
   MPlexLS propErr;
   MPlexLV propPar;
-  // do a line propagation step to correct for residual distance from the hit radius
-  // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
-  // do a full propagation step to correct for residual distance from the hit radius
-  propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
-  // propErr = psErr;
-  // propPar = psPar;
-  propErr.AddNoiseIntoUpperLeft3x3(0.); // e.g. ? 0.0008
+  if ( fabs( (psPar.ConstAt(0,0,0)*psPar.ConstAt(0,0,0) + psPar.ConstAt(0,1,0)*psPar.ConstAt(0,1,0)) - (msPar.ConstAt(0,0,0)*msPar.ConstAt(0,0,0) + msPar.ConstAt(0,1,0)*msPar.ConstAt(0,1,0)) )>0.00001 ) {
+    // do a line propagation step to correct for residual distance from the hit radius
+    // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
+    // do a full propagation step to correct for residual distance from the hit radius - need the charge for this
+    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
+  } else {
+    propErr = psErr;
+    propPar = psPar;
+  }
 
 #ifdef DEBUG
   if (dump) {

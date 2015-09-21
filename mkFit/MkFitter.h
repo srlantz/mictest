@@ -64,6 +64,7 @@ public:
   void InputTracksOnly   (std::vector<Track>& tracks, int beg, int end);
   void InputHitsOnly(std::vector<Hit>& hits, int beg, int end);
   void FitTracks();
+  void TestPropagation();
 
   void OutputTracks(std::vector<Track>& tracks, int beg, int end, int iCP);
   void OutputFittedTracks(std::vector<Track>& tracks, int beg, int end) {

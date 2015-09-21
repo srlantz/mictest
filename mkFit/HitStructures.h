@@ -326,7 +326,7 @@ public:
     int bin = Config::getEtaBin(seed.posEta());
     float r = seed.posR();
     if (bin != -1 && ( (Config::g_PropagateAtEnd == false && r > 11.9 && r < 12.1) || (Config::g_PropagateAtEnd == true && r > 15.9 && r < 16.1)  
-		       || (Config::g_PropagateAtEnd == true && r > 20.0 && r < 30.0) ) )//for tracks from cmssw... I guess this should become geometry-aware
+		       || (Config::g_PropagateAtEnd == true && r > 0.0 && r < 400.0) ) )//for tracks from cmssw... I guess this should become geometry-aware
       {
 	m_etabins_of_comb_candidates[bin].InsertSeed(seed);
       } 

@@ -27,7 +27,7 @@ static void print(const TrackState& s)
 
 static void print(std::string label, unsigned int itrack, const Track& trk)
 {
-  std::cout << std::endl << label << ": " << itrack << " hits: " << trk.nHits() << " State" << std::endl;
+  std::cout << std::endl << label << ": " << itrack << " hits: " << trk.nFoundHits() << " State" << std::endl;
   print(trk.state());
 }
 
@@ -40,11 +40,11 @@ static void print(std::string label, const TrackState& s)
 static void print(std::string label, const MeasurementState& s)
 {
   std::cout << label << std::endl;
-  std::cout << "x: "  << s.parameters[0] 
-            << " y: " << s.parameters[1]
-            << " z: " << s.parameters[2] << std::endl
+  std::cout << "x: "  << s.parameters()[0] 
+            << " y: " << s.parameters()[1]
+            << " z: " << s.parameters()[2] << std::endl
             << "errors: " << std::endl;
-  dumpMatrix(s.errors);
+  dumpMatrix(s.errors());
   std::cout << std::endl;
 }
 #endif
@@ -92,7 +92,7 @@ void fitTrack(const Track& trk, const Event& ev)
 #ifdef DEBUG
   if (debug) { 
     print("Sim track", itrack0, trk0);
-    print("Initial track", trk.SimTrackIDInfo().first, trk);
+    print("Initial track", 0/*trk.SimTrackIDInfo().first*/, trk);
     print("simStateHit0", simStateHit0);
     print("cfitStateHit0", cfitStateHit0);
     print("updatedState", updatedState);
@@ -118,7 +118,7 @@ void fitTrack(const Track& trk, const Event& ev)
 
 #ifdef DEBUG
     if (debug) {
-      std::cout << "processing hit: " << trk.SimTrackIDInfo().first << ":" << hit.hitID() << std::endl
+      std::cout << "processing hit: " << 0/*trk.SimTrackIDInfo().first*/ << ":" << 0/*hit.hitID()*/ << std::endl
                 << "hitR, propR, updR = " << hit.r() << ", " 
                 << Mag(propPos) << ", " << Mag(updPos) << std::endl << std::endl;
 

@@ -252,8 +252,8 @@ TrackState propagateHelixToNextSolid(TrackState inputState, const Geometry& geom
   }
 
   //5 iterations is a good starting point
-  const unsigned int Niter = 10;
-  for (unsigned int i=0;i<Niter;++i) {
+  //const unsigned int Niter = 10;
+  for (unsigned int i=0;i<Config::Niter;++i) {
     dprint("propagation iteration #" << i);
     const float distance = std::max(geom.SafetyFromOutside(UVector3(hsout.x,hsout.y,hsout.z),true), tolerance);
     totalDistance += distance;
@@ -261,7 +261,7 @@ TrackState propagateHelixToNextSolid(TrackState inputState, const Geometry& geom
     dprint("r0=" << hsout.r0 << " pt=" << hsout.pt << std::endl
                  << "distance=" << distance);
 
-    const bool updateDeriv = i+1!=Niter && hsout.r0>0.;
+    const bool updateDeriv = i+1!=Config::Niter && hsout.r0>0.;
     hsout.updateHelix(distance, updateDeriv, debug);
     hsout.setCoords(hsout.state.parameters);
 
@@ -272,7 +272,7 @@ TrackState propagateHelixToNextSolid(TrackState inputState, const Geometry& geom
       break;
     }
 
-    if ( i == (Niter-1) ) {
+    if ( i == (Config::Niter-1) ) {
       std::cerr << __FILE__ << ":" << __LINE__ 
                 << ": failed to converge in propagateHelixToNextSolid() after " << (i+1) << " iterations, "
                 << distance 
@@ -312,8 +312,8 @@ TrackState propagateHelixToLayer(TrackState inputState, unsigned int layer, cons
   float totalDistance = 0;
 
   //5 iterations is a good starting point
-  const unsigned int Niter = 5;
-  for (unsigned int i=0;i<Niter;++i) {
+  //const unsigned int Niter = 5;
+  for (unsigned int i=0;i<Config::Niter;++i) {
     dprint("propagation iteration #" << i);
 
     const float distance = std::max(target->SafetyFromOutside(UVector3(hsout.x,hsout.y,hsout.z),true), tolerance);
@@ -322,7 +322,7 @@ TrackState propagateHelixToLayer(TrackState inputState, unsigned int layer, cons
     dprint("r0=" << hsout.r0 << " pt=" << hsout.pt << std::endl
                  << "distance=" << distance);
 
-    const bool updateDeriv = i+1!=Niter && hsout.r0>0.;
+    const bool updateDeriv = i+1!=Config::Niter && hsout.r0>0.;
     hsout.updateHelix(distance, updateDeriv, debug);
     hsout.setCoords(hsout.state.parameters);
 
@@ -331,7 +331,7 @@ TrackState propagateHelixToLayer(TrackState inputState, unsigned int layer, cons
       dprint("Inside target");
       break;
     }
-    if ( i == (Niter-1) ) {
+    if ( i == (Config::Niter-1) ) {
       std::cerr << __FILE__ << ":" << __LINE__ 
                 << ": failed to converge in propagateHelixToLayer() after " << (i+1) << " iterations, "
                 << distance 
@@ -378,8 +378,8 @@ TrackState propagateHelixToR(TrackState inputState, float r) {
   float totalDistance = 0;
 
   //5 iterations is a good starting point
-  const unsigned int Niter = 10;
-  for (unsigned int i=0;i<Niter;++i) {
+  //const unsigned int Niter = 10;
+  for (unsigned int i=0;i<Config::Niter;++i) {
 
     dprint("propagation iteration #" << i);
 
@@ -389,7 +389,7 @@ TrackState propagateHelixToR(TrackState inputState, float r) {
     dprint("r0=" << hsout.r0 << " pt=" << hsout.pt << std::endl
                  << "distance=" << distance);
  
-    bool updateDeriv = i+1!=Niter && hsout.r0>0.;
+    bool updateDeriv = i+1!=Config::Niter && hsout.r0>0.;
     hsout.updateHelix(distance, updateDeriv, debug);
     hsout.setCoords(hsout.state.parameters);
 
@@ -397,7 +397,7 @@ TrackState propagateHelixToR(TrackState inputState, float r) {
       dprint("distance = " << r-hsout.r0 << " at iteration=" <<  i);
       break;
     }
-    if ( i == (Niter-1) && std::abs(r-hsout.r0) > tolerance) {
+    if ( i == (Config::Niter-1) && std::abs(r-hsout.r0) > tolerance) {
 #ifdef DEBUG
       if (debug) { // common condition when fit fails to converge
         std::cerr << __FILE__ << ":" << __LINE__ 
@@ -643,8 +643,8 @@ void propagateHelixToR_fewerTemps(TrackState& inputState, float r, TrackState& r
    // float dxdvar = 0.;
    // float dydvar = 0.;
    //5 iterations is a good starting point
-   const int Niter = 5;
-   for (int i = 0; i < Niter; ++i)
+   //const int Niter = 5;
+   for (int i = 0; i < Config::Niter; ++i)
    {
 #ifdef DEBUG
       if (dump) std::cout << "propagation iteration #" << i << std::endl;
@@ -686,7 +686,7 @@ void propagateHelixToR_fewerTemps(TrackState& inputState, float r, TrackState& r
       par.At(4) = py*cosAP+px*sinAP;
       // par.At(5) = pz; //take this out as it is redundant
 
-      if (i+1!=Niter && r0>0.)
+      if (i+1!=Config::Niter && r0>0.)
       {
          //update derivatives on total distance for next step, where totalDistance+=r-r0
          //now r0 depends on px and py
