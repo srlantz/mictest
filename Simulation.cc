@@ -341,7 +341,7 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
   hits.reserve(nTotHit);
   initHits.reserve(nTotHit);
 
-  // std::ifstream infile("cmssw.simtracks.SingleMu10GeV.10k.eta04z5.txt");
+  // std::ifstream infile("cmssw.simtracks.SingleMu10GeV.10k.eta06z5.txt");
   std::ifstream infile("cmssw.simtracks.SingleMu1GeV.1k.eta06z5.txt");
   // std::ifstream infile("cmssw.simtracks.SingleMu1GeVNoMaterial.1k.eta06z5.txt");
   // std::ifstream infile("cmssw.simtracks.SingleMu06GeV.1k.eta06z5.txt");
