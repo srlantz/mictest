@@ -164,9 +164,7 @@ class Hit
 public:
   Hit(){}
 
-  Hit(const MeasurementState& state) : state_(state) {}
-
-  Hit(const SVector3& position, const SMatrixSym33& error, int mcHitTrkID)
+  Hit(const SVector3& position, const SMatrixSym33& error, float radl, float xi, int mcHitTrkID)
   {
     state_.pos[0]=position[0];
     state_.pos[1]=position[1];
@@ -177,6 +175,8 @@ public:
     state_.err[3]=error.Array()[3];
     state_.err[4]=error.Array()[4];
     state_.err[5]=error.Array()[5];
+    radl_ = radl;
+    xi_ = xi;
     mcHitTrkID_ = mcHitTrkID;
   }
 
@@ -213,6 +213,11 @@ public:
     return getEta(state_.pos[0], state_.pos[1], state_.pos[2]);
   }
 
+  const float* radlPointer() const { return &radl_; }
+  const float* xiPointer() const { return &xi_; }
+  const float radl() const { return radl_; }
+  const float xi() const { return xi_; }
+
   int mcHitTrkID() const { return mcHitTrkID_; }
   int mcTrackID() const { return mcHitTrkID_ / 10; }
   int mcHitID() const { return mcHitTrkID_ % 10; }
@@ -227,6 +232,8 @@ private:
   // the factor 10* is ok since we have 10 hits per track, it can become 100* if we allow for more. 
   // we will need a different indexing when we'll consider htis from real detector
   int mcHitTrkID_;
+  float radl_;
+  float xi_;
 };
 
 typedef std::vector<Hit> HitVec;

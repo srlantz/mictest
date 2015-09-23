@@ -180,6 +180,7 @@ void kalmanGain_x_propErr(const MPlexLH& A, const MPlexLS& B, MPlexLS& C)
 
 void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MPlexQI &inChg,
                            const MPlexHS &msErr,  const MPlexHV& msPar,
+			   const MPlexQF &hitsRl, const MPlexQF& hitsXi,
                            MPlexLS &outErr,       MPlexLV& outPar)
 {
   // const idx_t N = psErr.N;
@@ -203,7 +204,7 @@ void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MP
     // do a line propagation step to correct for residual distance from the hit radius
     // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
     // do a full propagation step to correct for residual distance from the hit radius - need the charge for this
-    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
+    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, hitsRl, hitsXi, propErr, propPar);
     
 #ifdef DEBUG
   if (dump) {
@@ -343,6 +344,7 @@ void updateParametersMPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MP
 
 void computeChi2MPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MPlexQI &inChg,
 		      const MPlexHS &msErr,  const MPlexHV& msPar,
+		      const MPlexQF &hitsRl, const MPlexQF& hitsXi,
                             MPlexQF& outChi2)
 {
 
@@ -368,7 +370,7 @@ void computeChi2MPlex(const MPlexLS &psErr,  const MPlexLV& psPar, const MPlexQI
     // do a line propagation step to correct for residual distance from the hit radius
     // propagateLineToRMPlex(psErr,  psPar, msErr,  msPar, propErr, propPar);
     // do a full propagation step to correct for residual distance from the hit radius - need the charge for this
-    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, propErr, propPar);
+    propagateHelixToRMPlex(psErr,  psPar, inChg,  msPar, hitsRl, hitsXi, propErr, propPar);
   } else {
     propErr = psErr;
     propPar = psPar;

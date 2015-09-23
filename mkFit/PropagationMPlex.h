@@ -10,6 +10,7 @@ void propagateLineToRMPlex(const MPlexLS &psErr,  const MPlexLV& psPar,
 
 void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
                             const MPlexQI &inChg,  const MPlexHV& msPar,
+			    const MPlexQF &hitsRl, const MPlexQF& hitsXi,
                                   MPlexLS &outErr,       MPlexLV& outPar);
 
 void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,

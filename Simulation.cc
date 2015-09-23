@@ -293,12 +293,12 @@ void setupTrackByToyMC(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, HitVe
 
     SVector3 initVecXYZ(initX,initY,initZ);
     int index = 10*itrack + ihit;
-    Hit initHitXYZ(initVecXYZ,covXYZ,index); 
+    Hit initHitXYZ(initVecXYZ,covXYZ,0.,0.,index); 
     MCHitInfo initHitInfo(itrack,simLayer,layer_counts[simLayer]);
     initHits.push_back(initHitXYZ);
     initialhitinfo.push_back(initHitInfo);
 
-    Hit hit1(x1,covXYZ,index);
+    Hit hit1(x1,covXYZ,0.,0.,index);
     hits.push_back(hit1);
     tmpState = propState;
 
@@ -391,7 +391,9 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
       countHits++;
 
       float initX,initY,initZ;
-      iss >> initX >> initY >> initZ;
+      float r,eta;
+      float radl,xi;
+      iss >> initX >> initY >> initZ >> r >> eta >> radl >> xi;
 
       float initPhi = atan2(initY,initX);
       float initRad = sqrt(initX*initX+initY*initY);
@@ -421,12 +423,12 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
     
       SVector3 initVecXYZ(initX,initY,initZ);
       int index = 10*itrack + countHits;
-      Hit initHitXYZ(initVecXYZ,covXYZ,index); 
+      Hit initHitXYZ(initVecXYZ,covXYZ,radl,xi,index); 
       MCHitInfo initHitInfo(itrack,simLayer,layer_counts[simLayer]);
       initHits.push_back(initHitXYZ);
       initialhitinfo.push_back(initHitInfo);
       
-      Hit hit1(x1,covXYZ,index);
+      Hit hit1(x1,covXYZ,radl,xi,index);
       hits.push_back(hit1);
 
       ++layer_counts[simLayer];

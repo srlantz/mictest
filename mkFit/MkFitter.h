@@ -28,6 +28,9 @@ class MkFitter
   MPlexQI CandIdx;//this is the candidate index for the given seed (for bookkeeping of clone engine)
   MPlexQI HitsIdx[MAX_HITS];
 
+  MPlexQF HitsRl[MAX_HITS];
+  MPlexQF HitsXi[MAX_HITS];
+
   // Hold hit indices to explore at current layer.
   MPlexQI XHitPos;   // Should be pos (so can move it forward)
   MPlexQI XHitSize;  // Should be size (so i can reduce it)

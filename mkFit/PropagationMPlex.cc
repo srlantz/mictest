@@ -116,7 +116,8 @@ void MultHelixPropTransp(const MPlexLL& A, const MPlexLL& B, MPlexLS& C)
 
 // void propagateHelixToRMPlex(TrackState& inputState, float r, TrackState& result)
 void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
-                            const MPlexQI &inChg,  const MPlexHV& msPar,
+                            const MPlexQI &inChg,  const MPlexHV& msPar, 
+			    const MPlexQF &hitsRl, const MPlexQF& hitsXi,
                                   MPlexLS &outErr,       MPlexLV& outPar)
 {
 #ifdef DEBUG
@@ -156,7 +157,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float ptinv  = 1./pt;
       float pt2inv = ptinv*ptinv;
       //p=0.3Br => r=p/(0.3*B)
-      float k = inChg.ConstAt(n, 0, 0) * 100. / (-0.299792458*3.8);
+      float k = inChg.ConstAt(n, 0, 0) * 100. / (-0.299792458*3.8112);
       float invcurvature = 1./(pt*k);//in 1./cm
 
 #ifdef DEBUG
@@ -299,10 +300,10 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float dTPdpx = (dTDdpx - TD*dCdpx*iC)*iC; // MT change: avoid division
       float dTPdpy = (dTDdpy - TD*dCdpy*iC)*iC; // MT change: avoid division
 
-      // float cosTP = cos(TP);
-      // float sinTP = sin(TP);
-      float cosTP, sinTP;
-      sincos4(TP, sinTP, cosTP);
+      float cosTP = cos(TP);
+      float sinTP = sin(TP);
+      // float cosTP, sinTP;
+      // sincos4(TP, sinTP, cosTP);
 
       //derive these to compute jacobian
       //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
@@ -420,7 +421,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float beta = sqrt(beta2);
       //radiation lenght, corrected for the crossing angle (cos alpha from dot product of radius vector and momentum)
       float invCos = (p*r)/fabs(x*px+y*py);
-      float radL = 0.02 * invCos; //fixme works only for barrel geom, and using average radL for now... (to be taken from hit)
+      float radL = hitsRl.ConstAt(n,0,0) * invCos; //fixme works only for barrel geom
       // multiple scattering
       // in a reference frame defined by the orthogonal unit vectors: u=(px/p,py/p,pz/p) v=(-py/pt,px/pt,0) s=(-pzpx/pt/p,-pzpy/pt/p,pt/p)
       // we consider two planar angles theta1 and theta2 in the uv and us planes respectively
@@ -445,10 +446,10 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float gamma = 1./sqrt(1 - beta2);
       float gamma2 = gamma*gamma;
       constexpr float me = 0.0005; // m=0.5 MeV, electron
-      float wmax = 2*me*beta2*gamma2 / ( 1 + 2*gamma*me/mpi + me*me/(mpi*mpi) );
+      float wmax = 2.*me*beta2*gamma2 / ( 1 + 2.*gamma*me/mpi + me*me/(mpi*mpi) );
       constexpr float I = 16.0e-9 * 10.75;
       float deltahalf = log(28.816e-9 * sqrt(2.33*0.498)/I) + log(beta*gamma) - 0.5;
-      float dEdx = 0.06e-3 * invCos * (0.5*log(2*me*beta2*gamma2*wmax/(I*I)) - beta2 - deltahalf) / beta2 ;
+      float dEdx = hitsXi.ConstAt(n,0,0) * invCos * (0.5*log(2*me*beta2*gamma2*wmax/(I*I)) - beta2 - deltahalf) / beta2 ;
       // std::cout << "dEdx=" << dEdx << " delta=" << deltahalf << std::endl;
       float dP = dEdx/beta;
       outPar.At(n, 0, 3) -= dP*px/p;
@@ -456,7 +457,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       outPar.At(n, 0, 5) -= dP*pz/p;
       //we do nothing on the uncertainty for now
     }
-
+ 
    /*
      if (fabs(sqrt(outPar[0]*outPar[0]+outPar[1]*outPar[1])-r)>0.0001) {
      std::cout << "DID NOT GET TO R, dR=" << fabs(sqrt(outPar[0]*outPar[0]+outPar[1]*outPar[1])-r)
@@ -509,7 +510,7 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       float ptinv  = 1./pt;
       float pt2inv = ptinv*ptinv;
       //p=0.3Br => r=p/(0.3*B)
-      float k = inChg.ConstAt(n, 0, 0) * 100. / (-0.299792458*3.8);
+      float k = inChg.ConstAt(n, 0, 0) * 100. / (-0.299792458*3.8112);
       float invcurvature = 1./(pt*k);//in 1./cm
 
 #ifdef DEBUG
@@ -644,10 +645,10 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       float dTPdpx = (dTDdpx - TD*dCdpx*iC)*iC; // MT change: avoid division
       float dTPdpy = (dTDdpy - TD*dCdpy*iC)*iC; // MT change: avoid division
 
-      // float cosTP = cos(TP);
-      // float sinTP = sin(TP);
-      float cosTP, sinTP;
-      sincos4(TP, sinTP, cosTP);
+      float cosTP = cos(TP);
+      float sinTP = sin(TP);
+      // float cosTP, sinTP;
+      // sincos4(TP, sinTP, cosTP);
 
       //derive these to compute jacobian
       //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));

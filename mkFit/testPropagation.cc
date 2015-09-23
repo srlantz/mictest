@@ -8,7 +8,7 @@
 
 void testPropagation(Event& ev) {
 
-  std::cout << "CIAO" << std::endl;
+  std::cout << "testPropagation" << std::endl;
 
   std::vector<Track>& simtracks = ev.simTracks_;
   
