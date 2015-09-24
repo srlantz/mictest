@@ -297,23 +297,15 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 #endif
 
       //assume total path length s as given and with no uncertainty
-
       float p = pt2 + pzin*pzin;
       p = sqrt(p);
       float s = TD*p*ptinv;
-
+      // std::cout << "total path s=" << s << std::endl;
       // TD = s*pt/p;
       // TP = TD/(pt*k) = s/(p*k);
-
-      // std::cout << "total path s=" << s << std::endl;
-
-      float dpdpx = pxin/p;
-      float dpdpy = pyin/p;
-      float dpdpz = pzin/p;
-
-      float dTPdpx = -s*dpdpx/(k*p*p);
-      float dTPdpy = -s*dpdpy/(k*p*p);
-      float dTPdpz = -s*dpdpz/(k*p*p);
+      float dTPdpx = -s*pxin/(k*p*p*p);
+      float dTPdpy = -s*pyin/(k*p*p*p);
+      float dTPdpz = -s*pzin/(k*p*p*p);
 
       //derive these to compute jacobian
       //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
@@ -607,23 +599,15 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       // sincos4(TP, sinTP, cosTP);
 
       //assume total path length s as given and with no uncertainty
-
       float p = pt2 + pzin*pzin;
       p = sqrt(p);
       float s = TD*p*ptinv;
-
+      // std::cout << "total path s=" << s << std::endl;
       // TD = s*pt/p;
       // TP = TD/(pt*k) = s/(p*k);
-
-      // std::cout << "total path s=" << s << std::endl;
-
-      float dpdpx = pxin/p;
-      float dpdpy = pyin/p;
-      float dpdpz = pzin/p;
-
-      float dTPdpx = -s*dpdpx/(k*p*p);
-      float dTPdpy = -s*dpdpy/(k*p*p);
-      float dTPdpz = -s*dpdpz/(k*p*p);
+      float dTPdpx = -s*pxin/(k*p*p*p);
+      float dTPdpy = -s*pyin/(k*p*p*p);
+      float dTPdpz = -s*pzin/(k*p*p*p);
 
       //derive these to compute jacobian
       //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
