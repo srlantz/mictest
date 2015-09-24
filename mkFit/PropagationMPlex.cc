@@ -78,6 +78,38 @@ void propagateLineToRMPlex(const MPlexLS &psErr,  const MPlexLV& psPar,
 namespace
 {
 
+void MultHelixPropGC(const MPlexLL& A, const MPlexLS& B, MPlexLL& C)
+{
+
+#pragma simd
+  for (int n = 0; n < NN; ++n)
+    {
+      for (int i = 0; i < 6; ++i) {
+	for (int j = 0; j < 6; ++j) {
+	  C(n,i,j) = 0.;
+	  for (int k = 0; k < 6; ++k) C(n,i,j) += A.ConstAt(n,i,k)*B.ConstAt(n,k,j);
+	}
+      }
+    }
+  
+}
+
+void MultHelixPropTranspGC(const MPlexLL& A, const MPlexLL& B, MPlexLS& C)
+{
+
+#pragma simd
+  for (int n = 0; n < NN; ++n)
+    {
+      for (int i = 0; i < 6; ++i) {
+	for (int j = 0; j < 6; ++j) {
+	  C(n,i,j) = 0.;
+	  for (int k = 0; k < 6; ++k) C(n,i,j) += B.ConstAt(n,i,k)*A.ConstAt(n,j,k);
+	}
+      }
+    }
+  
+}
+
 void MultHelixProp(const MPlexLL& A, const MPlexLS& B, MPlexLL& C)
 {
    // C = A * B
@@ -168,10 +200,6 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       //variables to be updated at each iterations
       //derivatives initialized to value for first iteration, i.e. distance = r-r0in
       float totalDistance = 0;
-      float dTDdx = (r0in>0. && fabs(r-r0in)>0.00000001) ? -xin/r0in : 0.;
-      float dTDdy = (r0in>0. && fabs(r-r0in)>0.00000001) ? -yin/r0in : 0.;
-      float dTDdpx = 0.;
-      float dTDdpy = 0.;
       //temporaries used within the loop (declare here to reduce memory operations)
       float x = 0.;
       float y = 0.;
@@ -181,10 +209,6 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float angPath = 0.;//maybe this temporary can be removed?
       float cosAP=0.;
       float sinAP=0.;
-      float dAPdx = 0.;
-      float dAPdy = 0.;
-      float dAPdpx = 0.;
-      float dAPdpy = 0.;
       // float dxdvar = 0.;
       // float dydvar = 0.;
       //5 iterations is a good starting point
@@ -235,87 +259,27 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
          outPar.At(n, 4, 0) = py*cosAP+px*sinAP;
          //outPar.At(n, 5, 0) = pz; //take this out as it is redundant
 
-         if (i+1 != Config::Niter && r0 > 0 && fabs(angPath)>0.000000001)
-         {
-            //update derivatives on total distance for next step, where totalDistance+=r-r0
-            //now r0 depends on px and py
-            r0 = 1./r0;//WARNING, now r0 is r0inv (one less temporary)
-
-#ifdef DEBUG
-            if (dump) std::cout << "r0=" << 1./r0 << " r0inv=" << r0 << " pt=" << pt << std::endl;
-#endif
-
-            //update derivative on D
-            dAPdx = -x*r0*invcurvature;
-            dAPdy = -y*r0*invcurvature;
-            dAPdpx = -angPath*px*pt2inv;
-            dAPdpy = -angPath*py*pt2inv;
-            //reduce temporary variables
-            //dxdx = 1 + k*dAPdx*(px*sinAP + py*cosAP);
-            //dydx = k*dAPdx*(py*sinAP - px*cosAP);
-            //dTDdx -= r0*(x*dxdx + y*dydx);
-            dTDdx -= r0*(x*(1 + k*dAPdx*(px*sinAP + py*cosAP)) + y*(k*dAPdx*(py*sinAP - px*cosAP)));
-            //reuse same temporary variables
-            //dxdy = k*dAPdy*(px*sinAP + py*cosAP);
-            //dydy = 1 + k*dAPdy*(py*sinAP - px*cosAP);
-            //dTDdy -= r0*(x*dxdy + y*dydy);
-            dTDdy -= r0*(x*(k*dAPdy*(px*sinAP + py*cosAP)) + y*(1 + k*dAPdy*(py*sinAP - px*cosAP)));
-            //dxdpx = k*(sinAP + px*cosAP*dAPdpx - py*sinAP*dAPdpx);
-            //dydpx = k*(py*cosAP*dAPdpx + 1. - cosAP + px*sinAP*dAPdpx);
-            //dTDdpx -= r0*(x*dxdpx + y*dTDdpx);
-            dTDdpx -= r0*(x*(k*(sinAP + px*cosAP*dAPdpx - py*sinAP*dAPdpx)) + y*(k*(py*cosAP*dAPdpx + 1. - cosAP + px*sinAP*dAPdpx)));
-            //dxdpy = k*(px*cosAP*dAPdpy - 1. + cosAP - py*sinAP*dAPdpy);
-            //dydpy = k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy);
-            //dTDdpy -= r0*(x*dxdpy + y*(k*dydpy);
-            dTDdpy -= r0*(x*(k*(px*cosAP*dAPdpy - 1. + cosAP - py*sinAP*dAPdpy)) + y*(k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy)));
-
-         }
-
 #ifdef DEBUG
 	 if (dump) std::cout << "iteration end, dump parameters" << std::endl;
          if (dump) std::cout << "pos = " << outPar.At(n, 0, 0) << " " << outPar.At(n, 1, 0) << " " << outPar.At(n, 2, 0) << std::endl;
          if (dump) std::cout << "mom = " << outPar.At(n, 3, 0) << " " << outPar.At(n, 4, 0) << " " << outPar.At(n, 5, 0) << std::endl;
 	 if (dump) std::cout << "r=" << sqrt( outPar.At(n, 0, 0)*outPar.At(n, 0, 0) + outPar.At(n, 1, 0)*outPar.At(n, 1, 0) ) << " pT=" << sqrt( outPar.At(n, 3, 0)*outPar.At(n, 3, 0) + outPar.At(n, 4, 0)*outPar.At(n, 4, 0) ) << std::endl;
-	 if (dump) std::cout << "dAPdx=" << dAPdx << " dAPdy=" << dAPdy
-			     << " dAPdpx=" << dAPdpx << " dAPdpy=" << dAPdpy
-			     << " dTDdx=" << dTDdx << " dTDdy=" << dTDdy
-			     << " dTDdpx=" << dTDdpx << " dTDdpy=" << dTDdpy
-			     << std::endl;
 #endif
       }
 
       float totalAngPath=totalDistance*invcurvature;
       float& TD=totalDistance;
       float& TP=totalAngPath;
-      float& iC=invcurvature;
 
 #ifdef DEBUG
       if (dump) std::cout << "TD=" << TD << " TP=" << TP << " arrived at r=" << sqrt(outPar.At(n, 0, 0)*outPar.At(n, 0, 0)+outPar.At(n, 1, 0)*outPar.At(n, 1, 0)) << std::endl;
 #endif
-
-      float dCdpx = k*pxin*ptinv;
-      float dCdpy = k*pyin*ptinv;
-      float dTPdx = dTDdx*iC;
-      float dTPdy = dTDdy*iC;
-      float dTPdpx = (dTDdpx - TD*dCdpx*iC)*iC; // MT change: avoid division
-      float dTPdpy = (dTDdpy - TD*dCdpy*iC)*iC; // MT change: avoid division
 
       float cosTP = cos(TP);
       float sinTP = sin(TP);
       // float cosTP, sinTP;
       // sincos4(TP, sinTP, cosTP);
 
-      //derive these to compute jacobian
-      //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
-      //y = yin + k*(pyin*sinTP+pxin*(1-cosTP));
-      //z = zin + TD*ctgTheta;
-      //px = pxin*cosTP-pyin*sinTP;
-      //py = pyin*cosTP+pxin*sinTP;
-      //pz = pzin;
-      //jacobian
-
-
-      // Not everything is set! GenMul patterns are used to set 0 and 1 elements.
 #ifdef DEBUG
    if (dump) {
      std::cout 
@@ -332,27 +296,71 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
    }
 #endif
 
-      errorProp(n,0,0) = 1 + k*dTPdx*(pxin*sinTP + pyin*cosTP);	//dxdx;
-      errorProp(n,0,1) = k*dTPdy*(pxin*sinTP + pyin*cosTP);	//dxdy;
-      errorProp(n,0,3) = k*(sinTP + pxin*cosTP*dTPdpx - pyin*sinTP*dTPdpx); //dxdpx;
-      errorProp(n,0,4) = k*(pxin*cosTP*dTPdpy - 1. + cosTP - pyin*sinTP*dTPdpy);//dxdpy;
-      errorProp(n,1,0) = k*dTPdx*(pyin*sinTP - pxin*cosTP);	//dydx;
-      errorProp(n,1,1) = 1 + k*dTPdy*(pyin*sinTP - pxin*cosTP);	//dydy;
-      errorProp(n,1,3) = k*(pyin*cosTP*dTPdpx + 1. - cosTP + pxin*sinTP*dTPdpx);//dydpx;
-      errorProp(n,1,4) = k*(sinTP + pyin*cosTP*dTPdpy + pxin*sinTP*dTPdpy); //dydpy;
-      errorProp(n,2,0) = dTDdx*ctgTheta;	//dzdx;
-      errorProp(n,2,1) = dTDdy*ctgTheta;	//dzdy;
-      errorProp(n,2,3) = dTDdpx*ctgTheta - TD*pzin*pxin*pt2inv*ptinv;//dzdpx;
-      errorProp(n,2,4) = dTDdpy*ctgTheta - TD*pzin*pyin*pt2inv*ptinv;//dzdpy;
-      errorProp(n,2,5) = TD*ptinv; //dzdpz;
-      errorProp(n,3,0) = -dTPdx*(pxin*sinTP + pyin*cosTP);	//dpxdx;
-      errorProp(n,3,1) = -dTPdy*(pxin*sinTP + pyin*cosTP);	//dpxdy;
-      errorProp(n,3,3) = cosTP - dTPdpx*(pxin*sinTP + pyin*cosTP); //dpxdpx;
-      errorProp(n,3,4) = -sinTP - dTPdpy*(pxin*sinTP + pyin*cosTP);//dpxdpy;
-      errorProp(n,4,0) = -dTPdx*(pyin*sinTP - pxin*cosTP); //dpydx;
-      errorProp(n,4,1) = -dTPdy*(pyin*sinTP - pxin*cosTP);	//dpydy;
-      errorProp(n,4,3) = +sinTP - dTPdpx*(pyin*sinTP - pxin*cosTP);//dpydpx;
-      errorProp(n,4,4) = +cosTP - dTPdpy*(pyin*sinTP - pxin*cosTP);//dpydpy;
+      //assume total path length s as given and with no uncertainty
+
+      float p = pt2 + pzin*pzin;
+      p = sqrt(p);
+      float s = TD*p*ptinv;
+
+      // TD = s*pt/p;
+      // TP = TD/(pt*k) = s/(p*k);
+
+      // std::cout << "total path s=" << s << std::endl;
+
+      float dpdpx = pxin/p;
+      float dpdpy = pyin/p;
+      float dpdpz = pzin/p;
+
+      float dTPdpx = -s*dpdpx/(k*p*p);
+      float dTPdpy = -s*dpdpy/(k*p*p);
+      float dTPdpz = -s*dpdpz/(k*p*p);
+
+      //derive these to compute jacobian
+      //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
+      //y = yin + k*(pyin*sinTP+pxin*(1-cosTP));
+      //z = zin + k*TP*pzin;
+      //px = pxin*cosTP-pyin*sinTP;
+      //py = pyin*cosTP+pxin*sinTP;
+      //pz = pzin;
+      //jacobian
+
+      errorProp(n,0,0) = 1.;	                                                 //dxdx
+      errorProp(n,0,1) = 0.;	                                                 //dxdy
+      errorProp(n,0,2) = 0.;                                                     //dxdz
+      errorProp(n,0,3) = k*(sinTP + pxin*cosTP*dTPdpx - pyin*sinTP*dTPdpx);      //dxdpx
+      errorProp(n,0,4) = k*(pxin*cosTP*dTPdpy - 1. + cosTP - pyin*sinTP*dTPdpy); //dxdpy
+      errorProp(n,0,5) = k*dTPdpz*(pxin*cosTP - pyin*sinTP);                     //dxdpz
+      errorProp(n,1,0) = 0.;	                                                 //dydx
+      errorProp(n,1,1) = 1.;	                                                 //dydy
+      errorProp(n,1,2) = 0.;                                                     //dydz
+      errorProp(n,1,3) = k*(pyin*cosTP*dTPdpx + 1. - cosTP + pxin*sinTP*dTPdpx); //dydpx
+      errorProp(n,1,4) = k*(sinTP + pyin*cosTP*dTPdpy + pxin*sinTP*dTPdpy);      //dydpy
+      errorProp(n,1,5) = k*dTPdpz*(pyin*cosTP + pxin*sinTP);                     //dydpz
+      errorProp(n,2,0) = 0.;	                                                 //dzdx
+      errorProp(n,2,1) = 0.;	                                                 //dzdy
+      errorProp(n,2,2) = 1.;                                                     //dzdz
+      errorProp(n,2,3) = k*pzin*dTPdpx;                                          //dzdpx
+      errorProp(n,2,4) = k*pzin*dTPdpy;                                          //dzdpy
+      errorProp(n,2,5) = k*(TP + dTPdpz*pzin);                                   //dzdpz
+      errorProp(n,3,0) = 0.;	                                                 //dpxdx
+      errorProp(n,3,1) = 0.;	                                                 //dpxdy
+      errorProp(n,3,2) = 0.;                                                     //dpxdz
+      errorProp(n,3,3) = cosTP - dTPdpx*(pxin*sinTP + pyin*cosTP);               //dpxdpx
+      errorProp(n,3,4) = -sinTP - dTPdpy*(pxin*sinTP + pyin*cosTP);              //dpxdpy
+      errorProp(n,3,5) = -dTPdpz*(pxin*sinTP + pyin*cosTP);                      //dpxdpz
+      errorProp(n,4,0) = 0.;                                                     //dpydx
+      errorProp(n,4,1) = 0.;	                                                 //Dpydyd
+      errorProp(n,4,2) = 0.;                                                     //dpydz
+      errorProp(n,4,3) = +sinTP - dTPdpx*(pyin*sinTP - pxin*cosTP);              //dpydpx
+      errorProp(n,4,4) = +cosTP - dTPdpy*(pyin*sinTP - pxin*cosTP);              //dpydpy
+      errorProp(n,4,5) = -dTPdpz*(pyin*sinTP - pxin*cosTP);                      //dpydpz
+      errorProp(n,5,0) = 0.;                                                     //dpzdx
+      errorProp(n,5,1) = 0.;							 //dpzdy
+      errorProp(n,5,2) = 0.;							 //dpzdz 
+      errorProp(n,5,3) = 0.;							 //dpzdpx
+      errorProp(n,5,4) = 0.;							 //dpzdpy
+      errorProp(n,5,5) = 1.;							 //dpzdpz
+
    }
 
 #ifdef DEBUG
@@ -375,10 +383,9 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
    // Matriplex version of:
    // result.errors = ROOT::Math::Similarity(errorProp, outErr);
-
    MPlexLL temp;
-   MultHelixProp      (errorProp, outErr, temp);
-   MultHelixPropTransp(errorProp, temp,   outErr);
+   MultHelixPropGC      (errorProp, outErr, temp);
+   MultHelixPropTranspGC(errorProp, temp,   outErr);
    
    // This dump is now out of its place as similarity is done with matriplex ops.
 #ifdef DEBUG
@@ -521,10 +528,6 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       //variables to be updated at each iterations
       //derivatives initialized to value for first iteration, i.e. distance = r-r0in
       float totalDistance = 0;
-      float dTDdx = r0in > 0. ? -xin/r0in : 0.;
-      float dTDdy = r0in > 0. ? -yin/r0in : 0.;
-      float dTDdpx = 0.;
-      float dTDdpy = 0.;
       //temporaries used within the loop (declare here to reduce memory operations)
       float x = 0.;
       float y = 0.;
@@ -534,10 +537,6 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       float angPath = 0.;//maybe this temporary can be removed?
       float cosAP=0.;
       float sinAP=0.;
-      float dAPdx = 0.;
-      float dAPdy = 0.;
-      float dAPdpx = 0.;
-      float dAPdpy = 0.;
       // float dxdvar = 0.;
       // float dydvar = 0.;
       //5 iterations is a good starting point
@@ -588,41 +587,6 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
          outPar.At(n, 4, 0) = py*cosAP+px*sinAP;
          //outPar.At(n, 5, 0) = pz; //take this out as it is redundant
 
-         if (i+1 != Config::Niter && r0 > 0)
-         {
-            //update derivatives on total distance for next step, where totalDistance+=r-r0
-            //now r0 depends on px and py
-            r0 = 1./r0;//WARNING, now r0 is r0inv (one less temporary)
-
-#ifdef DEBUG
-            if (dump) std::cout << "r0=" << 1./r0 << " r0inv=" << r0 << " pt=" << pt << std::endl;
-#endif
-
-            //update derivative on D
-            dAPdx = -x*r0*invcurvature;
-            dAPdy = -y*r0*invcurvature;
-            dAPdpx = -angPath*px*pt2inv;
-            dAPdpy = -angPath*py*pt2inv;
-            //reduce temporary variables
-            //dxdx = 1 + k*dAPdx*(px*sinAP + py*cosAP);
-            //dydx = k*dAPdx*(py*sinAP - px*cosAP);
-            //dTDdx -= r0*(x*dxdx + y*dydx);
-            dTDdx -= r0*(x*(1 + k*dAPdx*(px*sinAP + py*cosAP)) + y*(k*dAPdx*(py*sinAP - px*cosAP)));
-            //reuse same temporary variables
-            //dxdy = k*dAPdy*(px*sinAP + py*cosAP);
-            //dydy = 1 + k*dAPdy*(py*sinAP - px*cosAP);
-            //dTDdy -= r0*(x*dxdy + y*dydy);
-            dTDdy -= r0*(x*(k*dAPdy*(px*sinAP + py*cosAP)) + y*(1 + k*dAPdy*(py*sinAP - px*cosAP)));
-            //dxdpx = k*(sinAP + px*cosAP*dAPdpx - py*sinAP*dAPdpx);
-            //dydpx = k*(py*cosAP*dAPdpx + 1. - cosAP + px*sinAP*dAPdpx);
-            //dTDdpx -= r0*(x*dxdpx + y*dTDdpx);
-            dTDdpx -= r0*(x*(k*(sinAP + px*cosAP*dAPdpx - py*sinAP*dAPdpx)) + y*(k*(py*cosAP*dAPdpx + 1. - cosAP + px*sinAP*dAPdpx)));
-            //dxdpy = k*(px*cosAP*dAPdpy - 1. + cosAP - py*sinAP*dAPdpy);
-            //dydpy = k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy);
-            //dTDdpy -= r0*(x*dxdpy + y*(k*dydpy);
-            dTDdpy -= r0*(x*(k*(px*cosAP*dAPdpy - 1. + cosAP - py*sinAP*dAPdpy)) + y*(k*(sinAP + py*cosAP*dAPdpy + px*sinAP*dAPdpy)));
-         }
-
 #ifdef DEBUG
          if (dump) std::cout << outPar.At(n, 0, 0) << " " << outPar.At(n, 1, 0) << " " << outPar.At(n, 2, 0) << std::endl;
          if (dump) std::cout << outPar.At(n, 3, 0) << " " << outPar.At(n, 4, 0) << " " << outPar.At(n, 5, 0) << std::endl;
@@ -632,23 +596,34 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       float totalAngPath=totalDistance*invcurvature;
       float& TD=totalDistance;
       float& TP=totalAngPath;
-      float& iC=invcurvature;
 
 #ifdef DEBUG
       if (dump) std::cout << "TD=" << TD << " TP=" << TP << " arrived at r=" << sqrt(outPar.At(n, 0, 0)*outPar.At(n, 0, 0)+outPar.At(n, 1, 0)*outPar.At(n, 1, 0)) << std::endl;
 #endif
 
-      float dCdpx = k*pxin*ptinv;
-      float dCdpy = k*pyin*ptinv;
-      float dTPdx = dTDdx*iC;
-      float dTPdy = dTDdy*iC;
-      float dTPdpx = (dTDdpx - TD*dCdpx*iC)*iC; // MT change: avoid division
-      float dTPdpy = (dTDdpy - TD*dCdpy*iC)*iC; // MT change: avoid division
-
       float cosTP = cos(TP);
       float sinTP = sin(TP);
       // float cosTP, sinTP;
       // sincos4(TP, sinTP, cosTP);
+
+      //assume total path length s as given and with no uncertainty
+
+      float p = pt2 + pzin*pzin;
+      p = sqrt(p);
+      float s = TD*p*ptinv;
+
+      // TD = s*pt/p;
+      // TP = TD/(pt*k) = s/(p*k);
+
+      // std::cout << "total path s=" << s << std::endl;
+
+      float dpdpx = pxin/p;
+      float dpdpy = pyin/p;
+      float dpdpz = pzin/p;
+
+      float dTPdpx = -s*dpdpx/(k*p*p);
+      float dTPdpy = -s*dpdpy/(k*p*p);
+      float dTPdpz = -s*dpdpz/(k*p*p);
 
       //derive these to compute jacobian
       //x = xin + k*(pxin*sinTP-pyin*(1-cosTP));
@@ -659,38 +634,51 @@ void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
       //pz = pzin;
       //jacobian
 
+      errorProp(n,0,0) = 1.;	                                                 //dxdx
+      errorProp(n,0,1) = 0.;	                                                 //dxdy
+      errorProp(n,0,2) = 0.;                                                     //dxdz
+      errorProp(n,0,3) = k*(sinTP + pxin*cosTP*dTPdpx - pyin*sinTP*dTPdpx);      //dxdpx
+      errorProp(n,0,4) = k*(pxin*cosTP*dTPdpy - 1. + cosTP - pyin*sinTP*dTPdpy); //dxdpy
+      errorProp(n,0,5) = k*dTPdpz*(pxin*cosTP - pyin*sinTP);                     //dxdpz
+      errorProp(n,1,0) = 0.;	                                                 //dydx
+      errorProp(n,1,1) = 1.;	                                                 //dydy
+      errorProp(n,1,2) = 0.;                                                     //dydz
+      errorProp(n,1,3) = k*(pyin*cosTP*dTPdpx + 1. - cosTP + pxin*sinTP*dTPdpx); //dydpx
+      errorProp(n,1,4) = k*(sinTP + pyin*cosTP*dTPdpy + pxin*sinTP*dTPdpy);      //dydpy
+      errorProp(n,1,5) = k*dTPdpz*(pyin*cosTP + pxin*sinTP);                     //dydpz
+      errorProp(n,2,0) = 0.;	                                                 //dzdx
+      errorProp(n,2,1) = 0.;	                                                 //dzdy
+      errorProp(n,2,2) = 1.;                                                     //dzdz
+      errorProp(n,2,3) = k*pzin*dTPdpx;                                          //dzdpx
+      errorProp(n,2,4) = k*pzin*dTPdpy;                                          //dzdpy
+      errorProp(n,2,5) = k*(TP + dTPdpz*pzin);                                   //dzdpz
+      errorProp(n,3,0) = 0.;	                                                 //dpxdx
+      errorProp(n,3,1) = 0.;	                                                 //dpxdy
+      errorProp(n,3,2) = 0.;                                                     //dpxdz
+      errorProp(n,3,3) = cosTP - dTPdpx*(pxin*sinTP + pyin*cosTP);               //dpxdpx
+      errorProp(n,3,4) = -sinTP - dTPdpy*(pxin*sinTP + pyin*cosTP);              //dpxdpy
+      errorProp(n,3,5) = -dTPdpz*(pxin*sinTP + pyin*cosTP);                      //dpxdpz
+      errorProp(n,4,0) = 0.;                                                     //dpydx
+      errorProp(n,4,1) = 0.;	                                                 //Dpydyd
+      errorProp(n,4,2) = 0.;                                                     //dpydz
+      errorProp(n,4,3) = +sinTP - dTPdpx*(pyin*sinTP - pxin*cosTP);              //dpydpx
+      errorProp(n,4,4) = +cosTP - dTPdpy*(pyin*sinTP - pxin*cosTP);              //dpydpy
+      errorProp(n,4,5) = -dTPdpz*(pyin*sinTP - pxin*cosTP);                      //dpydpz
+      errorProp(n,5,0) = 0.;                                                     //dpzdx
+      errorProp(n,5,1) = 0.;							 //dpzdy
+      errorProp(n,5,2) = 0.;							 //dpzdz 
+      errorProp(n,5,3) = 0.;							 //dpzdpx
+      errorProp(n,5,4) = 0.;							 //dpzdpy
+      errorProp(n,5,5) = 1.;							 //dpzdpz
 
-      // Not everything is set! GenMul patterns are used to set 0 and 1 elements.
-
-      errorProp(n,0,0) = 1 + k*dTPdx*(pxin*sinTP + pyin*cosTP);	//dxdx;
-      errorProp(n,0,1) = k*dTPdy*(pxin*sinTP + pyin*cosTP);	//dxdy;
-      errorProp(n,0,3) = k*(sinTP + pxin*cosTP*dTPdpx - pyin*sinTP*dTPdpx); //dxdpx;
-      errorProp(n,0,4) = k*(pxin*cosTP*dTPdpy - 1. + cosTP - pyin*sinTP*dTPdpy);//dxdpy;
-      errorProp(n,1,0) = k*dTPdx*(pyin*sinTP - pxin*cosTP);	//dydx;
-      errorProp(n,1,1) = 1 + k*dTPdy*(pyin*sinTP - pxin*cosTP);	//dydy;
-      errorProp(n,1,3) = k*(pyin*cosTP*dTPdpx + 1. - cosTP + pxin*sinTP*dTPdpx);//dydpx;
-      errorProp(n,1,4) = k*(sinTP + pyin*cosTP*dTPdpy + pxin*sinTP*dTPdpy); //dydpy;
-      errorProp(n,2,0) = dTDdx*ctgTheta;	//dzdx;
-      errorProp(n,2,1) = dTDdy*ctgTheta;	//dzdy;
-      errorProp(n,2,3) = dTDdpx*ctgTheta - TD*pzin*pxin*pt2inv*ptinv;//dzdpx;
-      errorProp(n,2,4) = dTDdpy*ctgTheta - TD*pzin*pyin*pt2inv*ptinv;//dzdpy;
-      errorProp(n,2,5) = TD*ptinv; //dzdpz;
-      errorProp(n,3,0) = -dTPdx*(pxin*sinTP + pyin*cosTP);	//dpxdx;
-      errorProp(n,3,1) = -dTPdy*(pxin*sinTP + pyin*cosTP);	//dpxdy;
-      errorProp(n,3,3) = cosTP - dTPdpx*(pxin*sinTP + pyin*cosTP); //dpxdpx;
-      errorProp(n,3,4) = -sinTP - dTPdpy*(pxin*sinTP + pyin*cosTP);//dpxdpy;
-      errorProp(n,4,0) = -dTPdx*(pyin*sinTP - pxin*cosTP); //dpydx;
-      errorProp(n,4,1) = -dTPdy*(pyin*sinTP - pxin*cosTP);	//dpydy;
-      errorProp(n,4,3) = +sinTP - dTPdpx*(pyin*sinTP - pxin*cosTP);//dpydpx;
-      errorProp(n,4,4) = +cosTP - dTPdpy*(pyin*sinTP - pxin*cosTP);//dpydpy;
    }
 
    // Matriplex version of:
    // result.errors = ROOT::Math::Similarity(errorProp, outErr);
 
    MPlexLL temp;
-   MultHelixProp      (errorProp, outErr, temp);
-   MultHelixPropTransp(errorProp, temp,   outErr);
+   MultHelixPropGC      (errorProp, outErr, temp);
+   MultHelixPropTranspGC(errorProp, temp,   outErr);
    
    // This dump is now out of its place as similarity is done with matriplex ops.
 #ifdef DEBUG
