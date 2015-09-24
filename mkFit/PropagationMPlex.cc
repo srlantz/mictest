@@ -404,6 +404,8 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 #pragma simd
    for (int n = 0; n < N; ++n)
    {
+      float radL = hitsRl.ConstAt(n,0,0);
+      if (radL<0.0000000000001) continue;
       const float& x = outPar.ConstAt(n,0,0);
       const float& y = outPar.ConstAt(n,0,1);
       const float& px = outPar.ConstAt(n,0,3);
@@ -420,7 +422,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
       float beta = sqrt(beta2);
       //radiation lenght, corrected for the crossing angle (cos alpha from dot product of radius vector and momentum)
       float invCos = (p*r)/fabs(x*px+y*py);
-      float radL = hitsRl.ConstAt(n,0,0) * invCos; //fixme works only for barrel geom
+      radL = radL * invCos; //fixme works only for barrel geom
       // multiple scattering
       // in a reference frame defined by the orthogonal unit vectors: u=(px/p,py/p,pz/p) v=(-py/pt,px/pt,0) s=(-pzpx/pt/p,-pzpy/pt/p,pt/p)
       // we consider two planar angles theta1 and theta2 in the uv and us planes respectively
@@ -468,7 +470,7 @@ void propagateHelixToRMPlex(const MPlexLS &inErr,  const MPlexLV& inPar,
 
 void propagateHelixToRMPlex(const MPlexLS& inErr,  const MPlexLV& inPar,
                             const MPlexQI& inChg,  const float    r,
-			    MPlexLS& outErr,       MPlexLV& outPar,
+			    MPlexLS&       outErr, MPlexLV&       outPar,
                             const int      N_proc)
 {
 #ifdef DEBUG
