@@ -293,6 +293,14 @@ void MkFitter::TestPropagation()
       " R=" << R <<
       std::endl;
 
+    std::cout << "err = " << Err[iC].At(0, 0, 0) << " " << Err[iC].At(0, 0, 1) << " " << Err[iC].At(0, 0, 2) << " " << Err[iC].At(0, 0, 3) << " " << Err[iC].At(0, 0, 4) << " " << Err[iC].At(0, 0, 5) << std::endl
+	      << "      " << Err[iC].At(0, 1, 0) << " " << Err[iC].At(0, 1, 1) << " " << Err[iC].At(0, 1, 2) << " " << Err[iC].At(0, 1, 3) << " " << Err[iC].At(0, 1, 4) << " " << Err[iC].At(0, 1, 5) << std::endl
+	      << "      " << Err[iC].At(0, 2, 0) << " " << Err[iC].At(0, 2, 1) << " " << Err[iC].At(0, 2, 2) << " " << Err[iC].At(0, 2, 3) << " " << Err[iC].At(0, 2, 4) << " " << Err[iC].At(0, 2, 5) << std::endl
+	      << "      " << Err[iC].At(0, 3, 0) << " " << Err[iC].At(0, 3, 1) << " " << Err[iC].At(0, 3, 2) << " " << Err[iC].At(0, 3, 3) << " " << Err[iC].At(0, 3, 4) << " " << Err[iC].At(0, 3, 5) << std::endl
+	      << "      " << Err[iC].At(0, 4, 0) << " " << Err[iC].At(0, 4, 1) << " " << Err[iC].At(0, 4, 2) << " " << Err[iC].At(0, 4, 3) << " " << Err[iC].At(0, 4, 4) << " " << Err[iC].At(0, 4, 5) << std::endl
+	      << "      " << Err[iC].At(0, 5, 0) << " " << Err[iC].At(0, 5, 1) << " " << Err[iC].At(0, 5, 2) << " " << Err[iC].At(0, 5, 3) << " " << Err[iC].At(0, 5, 4) << " " << Err[iC].At(0, 5, 5) << std::endl;
+
+
     propagateHelixToRMPlex(Err[iC], Par[iC], Chg, msPar[hi],
 			   HitsRl[hi],HitsXi[hi],
                            Err[iP], Par[iP]);
@@ -304,9 +312,12 @@ void MkFitter::TestPropagation()
 	      << " pT=" << hipo(Par[iP].At(0, 3, 0),Par[iP].At(0, 4, 0))
 	      << " and hit pos=" << msPar[hi].At(0, 0, 0) << " , " << msPar[hi].At(0, 1, 0) << " , " << msPar[hi].At(0, 2, 0) 
 	      << std::endl;
-    // std::cout << "err xx=" << Err[iP].At(0, 0, 0) << " yy=" << Err[iP].At(0, 1, 1) << " zz=" << Err[iP].At(0, 2, 2)
-    // 	      << " pxpx=" << Err[iP].At(0, 3, 3) << " pypy=" << Err[iP].At(0, 4, 4) << " pzpz=" << Err[iP].At(0, 5, 5)
-    // 	      << std::endl;
+    std::cout << std::setw(10) << "err = " << std::setw(10) << Err[iP].At(0, 0, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 0, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 0, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 0, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 0, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 0, 5) << std::setw(10) << std::endl
+	      << std::setw(10) << "      " << std::setw(10) << Err[iP].At(0, 1, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 1, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 1, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 1, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 1, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 1, 5) << std::setw(10) << std::endl
+	      << std::setw(10) << "      " << std::setw(10) << Err[iP].At(0, 2, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 2, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 2, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 2, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 2, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 2, 5) << std::setw(10) << std::endl
+	      << std::setw(10) << "      " << std::setw(10) << Err[iP].At(0, 3, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 3, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 3, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 3, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 3, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 3, 5) << std::setw(10) << std::endl
+	      << std::setw(10) << "      " << std::setw(10) << Err[iP].At(0, 4, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 4, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 4, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 4, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 4, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 4, 5) << std::setw(10) << std::endl
+	      << std::setw(10) << "      " << std::setw(10) << Err[iP].At(0, 5, 0) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 5, 1) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 5, 2) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 5, 3) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 5, 4) << std::setw(10) << " " << std::setw(10) << Err[iP].At(0, 5, 5) << std::setw(10) << std::endl;
 
     float xc = xin - curvature*pyin/pt;
     float yc = yin + curvature*pxin/pt;
