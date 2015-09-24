@@ -402,9 +402,12 @@ void setupTrackFromTextFile(SVector3& pos, SVector3& mom, SMatrixSym66& covtrk, 
       simLayer = geom.LayerIndex(init_point);
       simLayer = 1;//fixme
 
-      float hitZ    = hitposerrZ*g_gaus(g_gen)+initZ;
-      float hitPhi  = ((hitposerrXY/initRad)*g_gaus(g_gen))+initPhi;
-      float hitRad  = (hitposerrR)*g_gaus(g_gen)+initRad;
+      float hitZ    = initZ;
+      float hitPhi  = initPhi;
+      float hitRad  = initRad;
+      hitZ    += hitposerrZ*g_gaus(g_gen);
+      hitPhi  += ((hitposerrXY/initRad)*g_gaus(g_gen));
+      hitRad  += (hitposerrR)*g_gaus(g_gen);
 
       float hitRad2 = hitRad*hitRad;
       float hitX    = hitRad*cos(hitPhi);
